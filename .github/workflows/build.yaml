@@ -1,0 +1,37 @@
+name: build suite
+on:
+  workflow_dispatch:
+  push:
+    branches:
+        - c4t
+        - dev
+        - suite    
+        - suite-c4t
+
+  pull_request:
+    branches:
+        - c4t
+        - dev
+        - suite
+        - suite-c4t
+jobs:
+  yarn-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          
+      - name: install yarn dependencies
+        run: yarn install
+      - name: lint
+        run: yarn lint
+      - name: prettier
+        run: yarn run format-check
+      - name: build
+        run: yarn build

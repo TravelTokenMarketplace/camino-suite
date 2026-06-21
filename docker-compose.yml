@@ -1,0 +1,34 @@
+version: '3.5'
+
+services:
+
+  voting:
+    image: ${VOTING_IMAGE}
+    entrypoint: ["yarn", "start"]
+    ports:
+      - 5004:5004
+    container_name: camino-suite-voting-container
+
+  wallet:
+    image: ${WALLET_IMAGE}
+    entrypoint: ["yarn", "start"]
+    ports:
+      - 5003:5003
+    container_name: camino-suite-wallet-container
+  explorer:
+    image: ${EXPLORER_IMAGE}
+    entrypoint: ["yarn", "start"]
+    ports:
+      - 5002:5002
+    container_name: camino-suite-explorer-container
+  suite:
+    build:
+      context: .
+      args: 
+        BUILD_ENV: ${BUILD_ENV}
+    image: ${SUITE_IMAGE}
+    entrypoint: ["yarn", "start"]
+    ports:
+      - 5001:5001
+    container_name: camino-suite-host-container
+

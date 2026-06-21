@@ -1,0 +1,165 @@
+name: cypress-tests
+
+on:
+  push:
+    branches: [c4t, dev, suite, suite-c4t]
+  pull_request:
+    branches: [c4t, dev, suite, suite-c4t]
+
+env:
+  wallet_image: 'public.ecr.aws/n0m7j6i5/camino-suite-wallet'
+  explorer_image: 'public.ecr.aws/n0m7j6i5/camino-suite-explorer'
+  aws_region: 'eu-central-1'
+
+jobs:
+  wallet-cypress:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # The node version, you can put one or many versions in here to test with
+        node: [16]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: get branch name
+        id: setBranch
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "branch=${{ github.base_ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.aws_region }}
+        
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ env.aws_region }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.aws_region }}.amazonaws.com
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+
+      - name: build local image
+        run: |
+          docker compose build --build-arg EXPLORER_IMAGE=${{ env.explorer_image }}:${{ steps.setBranch.outputs.branch }} --build-arg WALLET_IMAGE=${{ env.wallet_image }}:${{ steps.setBranch.outputs.branch }}          
+          export EXPLORER_IMAGE=${{ env.explorer_image }}:${{ steps.setBranch.outputs.branch }}
+          export WALLET_IMAGE=${{ env.wallet_image }}:${{ steps.setBranch.outputs.branch }}
+          docker compose up -d
+          docker cp camino-suite-host-container:/app/camino-suite ./
+          mkdir -p /home/runner/.cache
+          docker cp camino-suite-host-container:/root/.cache/Cypress  /home/runner/.cache/
+
+      - name: cypress-run
+        uses: cypress-io/github-action@v5
+        env:
+          USE_HTTP: true
+        with:
+          wait-on: 'http://localhost:5001/, http://localhost:5002/, http://localhost:5003/'
+          working-directory: camino-suite
+          # wait for 3 minutes for the server to respond
+          wait-on-timeout: 180
+          browser: chrome
+          headless: true
+          config-file: cypress.config.ts
+          env: grepTags=@wallet
+
+      # These extract all artifacts out from the container to git so they can be previewed
+      - name: extract screenshots to git
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots_wallet
+          path: camino-suite/cypress/screenshots
+      # Test run video was always captured, so this action uses "always()" condition
+      - name: extract videos to git
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cypress-videos_wallet
+          path: camino-suite/cypress/videos
+
+
+  explorer-cypress:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # The node version, you can put one or many versions in here to test with
+        node: [16]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: get branch name
+        id: setBranch
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "branch=${{ github.base_ref }}" >> $GITHUB_OUTPUT
+          else
+            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.aws_region }}
+        
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ env.aws_region }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.aws_region }}.amazonaws.com
+          aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+
+      - name: build local image
+        run: |
+          docker compose build --build-arg EXPLORER_IMAGE=${{ env.explorer_image }}:${{ steps.setBranch.outputs.branch }} --build-arg WALLET_IMAGE=${{ env.wallet_image }}:${{ steps.setBranch.outputs.branch }}          
+          export EXPLORER_IMAGE=${{ env.explorer_image }}:${{ steps.setBranch.outputs.branch }}
+          export WALLET_IMAGE=${{ env.wallet_image }}:${{ steps.setBranch.outputs.branch }}
+          docker compose up -d
+          docker cp camino-suite-host-container:/app/camino-suite ./
+          mkdir -p /home/runner/.cache
+          docker cp camino-suite-host-container:/root/.cache/Cypress  /home/runner/.cache/
+
+      - name: cypress-run
+        uses: cypress-io/github-action@v5
+        env:
+          USE_HTTP: true
+        with:
+          wait-on: 'http://localhost:5001/, http://localhost:5002/, http://localhost:5003/'
+          working-directory: camino-suite
+          # wait for 3 minutes for the server to respond
+          wait-on-timeout: 180
+          browser: chrome
+          headless: true
+          config-file: cypress.config.ts
+          env: grepTags=@explorer
+
+      # These extract all artifacts out from the container to git so they can be previewed
+      - name: extract screenshots to git
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots_explorer
+          path: camino-suite/cypress/screenshots
+      # Test run video was always captured, so this action uses "always()" condition
+      - name: extract videos to git
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cypress-videos_explorer
+          path: camino-suite/cypress/videos

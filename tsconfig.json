@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "target": "ES2018",
+        "lib": ["ES2018", "DOM"],
+        "jsx": "react",
+        "resolveJsonModule": true,
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "typeRoots": ["node_modules/@types"],
+        "types": ["cypress", "node"],
+        "paths": {
+            "ethers": ["./node_modules/ethers"]
+        }
+    },
+    "include": ["src", "cypress"],
+    "ts-node": {
+        "compilerOptions": {
+            "jsx": "react",
+            "esModuleInterop": true,
+            "module": "commonjs",
+            "moduleResolution": "node",
+            "noEmit": true,
+            "allowSyntheticDefaultImports": true
+        }
+    }
+}
