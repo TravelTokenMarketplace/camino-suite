@@ -21,11 +21,7 @@ module.exports = merge(common, {
         new ModuleFederationPlugin({
             name: 'host_react',
             filename: 'remoteEntry.js',
-            remotes: {
-                Explorer: 'Explorer@http://localhost:5002/remoteEntry.js',
-                wallet: 'wallet@http://localhost:5003/remoteEntry.js',
-                DAC: 'dac@http://localhost:5005/remoteEntry.js',
-            },
+            remotes: {},
             exposes: {},
             shared: {
                 ...deps,
