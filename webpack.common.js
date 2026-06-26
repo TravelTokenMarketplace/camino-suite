@@ -24,6 +24,12 @@ module.exports = {
         extensions: ['.vue', '.tsx', '.ts', '.jsx', '.js', '.json'],
         alias: {
             '@': path.resolve(__dirname, 'src'),
+            // Redirect the old Module-Federation remotes to local shims so the
+            // host runs standalone (no wallet/Explorer/DAC remotes). See src/remote-shims.
+            'wallet/store$': path.resolve(__dirname, 'src/remote-shims/walletStore.ts'),
+            'wallet/AvaNetwork$': path.resolve(__dirname, 'src/remote-shims/AvaNetwork.ts'),
+            'wallet/caminoClient$': path.resolve(__dirname, 'src/remote-shims/caminoClient.ts'),
+            'Explorer/useStore$': path.resolve(__dirname, 'src/remote-shims/explorerStore.tsx'),
         },
     },
 
