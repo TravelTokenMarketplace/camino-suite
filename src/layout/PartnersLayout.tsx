@@ -12,7 +12,7 @@ import { SmartContractProvider } from '../helpers/useSmartContract'
 import { selectPartnerData } from '../redux/selectors/partners'
 import { getWalletName } from '../redux/slices/app-config'
 import { getActiveNetwork } from '../redux/slices/network'
-import Links from '../views/settings/Links'
+import Links from '../views/partners/Links'
 
 const ClaimProfile = () => {
     const generateEmail = () => {

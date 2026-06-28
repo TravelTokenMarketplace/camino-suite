@@ -8,7 +8,6 @@ import store from 'wallet/store'
 import { useSmartContract } from '../../helpers/useSmartContract'
 import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
 import { changeActiveApp } from '../../redux/slices/app-config'
-import { getActiveNetwork } from '../../redux/slices/network'
 
 function a11yProps(index: number) {
     return {
@@ -17,6 +16,12 @@ function a11yProps(index: number) {
     }
 }
 
+/**
+ * Partner section tab bar (relocated from views/settings). Top-level tabs:
+ * Partner Showroom / My Partner Profile; plus the messenger-configuration sub-tabs.
+ * The "My Partner Profile" tab is shown to any connected wallet (self-service on
+ * Base Sepolia) — the old columbus/camino network gate has been removed.
+ */
 export default function Links({ type = 'else', partner }: { type?: string; partner?: any }) {
     const dispatch = useAppDispatch()
     const [value, setValue] = useState(0)
@@ -30,10 +35,7 @@ export default function Links({ type = 'else', partner }: { type?: string; partn
     }
     const theme = useTheme()
     useEffect(() => {
-        if (path === '/settings') setValue(0)
-        else if (path === '/settings/manage-multisig') setValue(1)
-        else if (path === '/settings/verify-wallet') setValue(2)
-        else if (path === '/partners') setValue(0)
+        if (path === '/partners') setValue(0)
         else if (path.includes('partners/messenger-configuration')) {
             setValue(1)
             if (path.includes('mymessenger')) setSecondValue(1)
@@ -48,7 +50,6 @@ export default function Links({ type = 'else', partner }: { type?: string; partn
     }, [path]) // eslint-disable-line react-hooks/exhaustive-deps
     const auth = useAppSelector(state => state.appConfig.isAuth)
     const sc = useSmartContract()
-    const activeNetwork = useAppSelector(getActiveNetwork)
     const tabStyle = (index: number, currentValue: number) => ({
         '&::after': { display: currentValue === index ? 'block' : 'none' },
         color: currentValue === index ? theme.palette.text.primary : 'inherit',
@@ -57,35 +58,6 @@ export default function Links({ type = 'else', partner }: { type?: string; partn
         },
     })
     let { partnerID } = useParams()
-    const settingsTabs = [
-        <Tab
-            className="tab"
-            disableRipple
-            label="Save account"
-            onClick={() => navigate('/settings')}
-            {...a11yProps(0)}
-            key={0}
-            sx={tabStyle(0, value)}
-        />,
-        <Tab
-            className="tab"
-            disableRipple
-            label="Multisignature Wallet"
-            onClick={() => navigate('manage-multisig')}
-            {...a11yProps(1)}
-            key={1}
-            sx={tabStyle(1, value)}
-        />,
-        <Tab
-            className="tab"
-            disableRipple
-            label="Verify Wallet"
-            onClick={() => navigate('verify-wallet')}
-            {...a11yProps(2)}
-            key={2}
-            sx={tabStyle(2, value)}
-        />,
-    ]
 
     const partnersTabs = [
         <Tab
@@ -97,20 +69,17 @@ export default function Links({ type = 'else', partner }: { type?: string; partn
             key={0}
             sx={tabStyle(0, value)}
         />,
-        auth &&
-            store.state.activeWallet?.type !== 'multisig' &&
-            (activeNetwork?.name?.toLowerCase() === 'columbus' ||
-                activeNetwork?.name?.toLowerCase() === 'camino') && (
-                <Tab
-                    onClick={() => navigate('/partners/messenger-configuration')}
-                    className="tab"
-                    disableRipple
-                    label="My Partner Profile"
-                    {...a11yProps(1)}
-                    key={1}
-                    sx={tabStyle(1, value)}
-                />
-            ),
+        auth && store.state.activeWallet?.type !== 'multisig' && (
+            <Tab
+                onClick={() => navigate('/partners/messenger-configuration')}
+                className="tab"
+                disableRipple
+                label="My Partner Profile"
+                {...a11yProps(1)}
+                key={1}
+                sx={tabStyle(1, value)}
+            />
+        ),
     ]
 
     const partnersSubTabs = [
@@ -228,11 +197,11 @@ export default function Links({ type = 'else', partner }: { type?: string; partn
                     variant="scrollable"
                     allowScrollButtonsMobile
                 >
-                    {partner?.contractAddress.toLocaleLowerCase() ===
-                        sc?.contractCMAccountAddress.toLocaleLowerCase() ||
+                    {partner?.contractAddress?.toLocaleLowerCase() ===
+                        sc?.contractCMAccountAddress?.toLocaleLowerCase() ||
                     path.includes('partners/messenger-configuration')
-                        ? partnersSubTabs.map((tab, index) => (tab ? tab : null))
-                        : partnersSubTabsGuest.map((tab, index) => (tab ? tab : null))}
+                        ? partnersSubTabs.map(tab => (tab ? tab : null))
+                        : partnersSubTabsGuest.map(tab => (tab ? tab : null))}
                 </Tabs>
             </Box>
         )
@@ -251,12 +220,8 @@ export default function Links({ type = 'else', partner }: { type?: string; partn
                 allowScrollButtonsMobile
             >
                 {type === 'subtabs'
-                    ? partnersSubTabs.map((tab, index) => (tab ? tab : null))
-                    : path.includes('/partners')
-                    ? partnersTabs.map((tab, index) => {
-                          return tab
-                      })
-                    : settingsTabs.map((tab, index) => (tab ? tab : null))}
+                    ? partnersSubTabs.map(tab => (tab ? tab : null))
+                    : partnersTabs.map(tab => tab)}
             </Tabs>
         </Box>
     )
