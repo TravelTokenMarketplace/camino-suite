@@ -1,67 +1,25 @@
-import { mdiClose, mdiMenu, mdiWalletOutline } from '@mdi/js'
-import {
-    AppBar,
-    Box,
-    Drawer,
-    IconButton,
-    Stack,
-    Toolbar,
-    Typography,
-    useTheme,
-} from '@mui/material'
+import { mdiClose, mdiMenu } from '@mdi/js'
+import { AppBar, Box, Drawer, IconButton, Stack, Toolbar, useTheme } from '@mui/material'
 import React, { useState } from 'react'
-import { DRAWER_WIDTH, TIMEOUT_DURATION } from '../../constants/apps-consts'
-import { useAppDispatch, useAppSelector } from '../../hooks/reduxHooks'
+import { DRAWER_WIDTH } from '../../constants/apps-consts'
+import { useAppSelector } from '../../hooks/reduxHooks'
 
 import Icon from '@mdi/react'
 import { getActiveNetwork } from '../../redux/slices/network'
 import MHidden from '../@material-extend/MHidden'
 import MIconButton from '../@material-extend/MIconButton'
 import PlatformSwitcher from '../PlatformSwitcher'
-import Account from './Account'
-import LoggedInAccount from './LoggedInAccount'
+import ConnectWallet from './ConnectWallet'
 import NetworkSwitcher from './NetworkSwitcher'
 import ThemeSwitcher from './ThemeSwitcher'
-// @ts-ignore
-import { useIdleTimer } from 'react-idle-timer'
-import { useNavigate } from 'react-router-dom'
-import store from 'wallet/store'
-import { updateAccount } from '../../redux/slices/app-config'
-import { updateAuthStatus } from '../../redux/slices/utils'
 
 export default function Navbar() {
     const theme = useTheme()
     const activeNetwork = useAppSelector(getActiveNetwork)
-    const auth = useAppSelector(state => state.appConfig.isAuth)
-    const navigate = useNavigate()
 
     const [openSidebar, setOpenSidebar] = useState(false)
-    const handleCloseSidebar = () => {
-        setOpenSidebar(false)
-    }
-    const handleOpenSidebar = () => {
-        setOpenSidebar(true)
-    }
-    const dispatch = useAppDispatch()
-
-    const onIdle = async () => {
-        if (auth && window.location.hostname !== 'localhost') {
-            await store.dispatch('logout')
-            dispatch(updateAccount(null))
-            dispatch(updateAuthStatus(false))
-            navigate('/login')
-        }
-    }
-
-    const navigateToLogin = () => {
-        navigate('/login')
-        handleCloseSidebar()
-    }
-
-    useIdleTimer({
-        onIdle,
-        timeout: TIMEOUT_DURATION,
-    })
+    const handleCloseSidebar = () => setOpenSidebar(false)
+    const handleOpenSidebar = () => setOpenSidebar(true)
 
     return (
         <AppBar
@@ -92,19 +50,6 @@ export default function Navbar() {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                     {/* Mobile */}
                     <MHidden width="smUp">
-                        {!auth && (
-                            <Box
-                                onClick={navigateToLogin}
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '5px',
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                <Icon path={mdiWalletOutline} size={1} />
-                            </Box>
-                        )}
                         <Drawer
                             anchor="right"
                             ModalProps={{ keepMounted: true }}
@@ -130,9 +75,7 @@ export default function Navbar() {
                                 >
                                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                                         <ThemeSwitcher />
-                                        <IconButton onClick={navigateToLogin}>
-                                            <Icon path={mdiWalletOutline} size={1} />
-                                        </IconButton>
+                                        <ConnectWallet />
                                     </Box>
                                     <Box sx={{ flexGrow: 1 }} />
                                     <MIconButton onClick={handleCloseSidebar}>
@@ -143,7 +86,6 @@ export default function Navbar() {
                                     <NetworkSwitcher handleCloseSidebar={handleCloseSidebar} />
                                 )}
                             </Box>
-                            {auth && <Account handleCloseSidebar={handleCloseSidebar} />}
                         </Drawer>
                         <MIconButton onClick={handleOpenSidebar}>
                             <Icon path={mdiMenu} size={1} />
@@ -152,29 +94,9 @@ export default function Navbar() {
                     {/* Desktop */}
                     <MHidden width="smDown">
                         <>
-                            {!auth && <ThemeSwitcher />}
+                            <ThemeSwitcher />
                             {activeNetwork && <NetworkSwitcher />}
-                            {!auth ? (
-                                <Box
-                                    onClick={() => navigate('/login')}
-                                    sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '5px',
-                                        cursor: 'pointer',
-                                    }}
-                                >
-                                    <Icon path={mdiWalletOutline} size={1} />
-                                    <Typography variant="body2" component="span">
-                                        Login
-                                    </Typography>
-                                </Box>
-                            ) : (
-                                <>
-                                    <LoggedInAccount />
-                                    <Account handleCloseSidebar={handleCloseSidebar} />
-                                </>
-                            )}
+                            <ConnectWallet />
                         </>
                     </MHidden>
                 </Box>
