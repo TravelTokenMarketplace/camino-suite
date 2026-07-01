@@ -95,7 +95,9 @@ async function fetchContractServices(contractAddress: string, provider: ethers.P
 
 async function getContractMappings(): Promise<Map<string, string>> {
     const selectedNetwork = store.getters['Network/selectedNetwork']
-    const provider = new ethers.JsonRpcProvider(selectedNetwork.rpcUrl)
+    const provider = new ethers.JsonRpcProvider(selectedNetwork.rpcUrl, undefined, {
+        batchMaxCount: 1,
+    })
     let contractAddress = selectedNetwork.managerAddress
     const managerReadOnlyContract = new ethers.Contract(
         contractAddress,
@@ -230,8 +232,8 @@ export const getPartnersWithServices = async (response: PartnersResponseType) =>
         return response
     }
 
-    const providerUrl = `${selectedNetwork.protocol}://${selectedNetwork.ip}:${selectedNetwork.port}/ext/bc/C/rpc`
-    const provider = new ethers.JsonRpcProvider(providerUrl)
+    const providerUrl = selectedNetwork.rpcUrl
+    const provider = new ethers.JsonRpcProvider(providerUrl, undefined, { batchMaxCount: 1 })
 
     const contractMappings = await getContractMappings()
     const partnersWithServices = await Promise.all(

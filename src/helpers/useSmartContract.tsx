@@ -123,7 +123,12 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
     const initializeEthers = async () => {
         const selectedNetwork = store.getters['Network/selectedNetwork']
         // Base Sepolia: flat EVM RPC (no /ext/bc/C/rpc), single CMAccountManager address.
-        const ethersProvider = new ethers.JsonRpcProvider(selectedNetwork.rpcUrl)
+        // batchMaxCount:1 disables ethers' JSON-RPC call batching — the public Base
+        // Sepolia RPC mishandles batched eth_calls (returns empty -> CALL_EXCEPTION),
+        // even though the same calls succeed individually.
+        const ethersProvider = new ethers.JsonRpcProvider(selectedNetwork.rpcUrl, undefined, {
+            batchMaxCount: 1,
+        })
         try {
             let contractAddress = selectedNetwork.managerAddress
             if (auth) {

@@ -97,7 +97,8 @@ export function getAddress(): string {
 
 /** Read-only provider for contract reads (no wallet required). */
 export function getReadProvider(): ethers.JsonRpcProvider {
-    return new ethers.JsonRpcProvider(BASE_SEPOLIA.rpcUrl)
+    // batchMaxCount:1 — public Base Sepolia RPC mishandles batched eth_calls.
+    return new ethers.JsonRpcProvider(BASE_SEPOLIA.rpcUrl, undefined, { batchMaxCount: 1 })
 }
 
 /** Signer from the injected wallet, for contract writes. */
