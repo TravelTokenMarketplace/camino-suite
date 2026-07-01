@@ -62,7 +62,9 @@ module.exports = {
     },
 
     plugins: [
-        new Dotenv(),
+        // `systemvars: true` also inlines shell/Docker-ARG env vars (e.g.
+        // STRAPI_BASE_URL) at build time, in addition to those from .env.
+        new Dotenv({ systemvars: true }),
         new webpack.DefinePlugin({
             'process.env.GIT_COMMIT_HASH': JSON.stringify(gitInfo.commit),
             'process.env.VERSION': JSON.stringify(gitInfo.tag),

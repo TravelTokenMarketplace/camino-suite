@@ -1,34 +1,35 @@
-version: '3.5'
+# Local one-command demo stack for the TTM Partner Showroom.
+#
+#   docker compose up --build
+#     web  -> http://localhost:8080   (the Camino Suite SPA)
+#     api  -> http://localhost:1337   (dummy Strapi; admin at /admin)
+#
+# STRAPI_BASE_URL is baked into the SPA's JS bundle at BUILD time (webpack inlines
+# process.env.STRAPI_BASE_URL). Because the SPA runs in the user's BROWSER, this
+# URL must be reachable *from the browser* — i.e. the host-published api port
+# `http://localhost:1337`, NOT the compose service name `http://api:1337`
+# (which only resolves between containers, not from the browser).
 
 services:
+  api:
+    build:
+      context: ../partner-showroom-api
+    image: partner-showroom-api
+    container_name: partner-showroom-api
+    ports:
+      - "1337:1337"
+    restart: unless-stopped
 
-  voting:
-    image: ${VOTING_IMAGE}
-    entrypoint: ["yarn", "start"]
-    ports:
-      - 5004:5004
-    container_name: camino-suite-voting-container
-
-  wallet:
-    image: ${WALLET_IMAGE}
-    entrypoint: ["yarn", "start"]
-    ports:
-      - 5003:5003
-    container_name: camino-suite-wallet-container
-  explorer:
-    image: ${EXPLORER_IMAGE}
-    entrypoint: ["yarn", "start"]
-    ports:
-      - 5002:5002
-    container_name: camino-suite-explorer-container
-  suite:
+  web:
     build:
       context: .
-      args: 
-        BUILD_ENV: ${BUILD_ENV}
-    image: ${SUITE_IMAGE}
-    entrypoint: ["yarn", "start"]
+      args:
+        # Browser-reachable URL of the api service (see note above).
+        STRAPI_BASE_URL: http://localhost:1337
+    image: camino-suite-web
+    container_name: camino-suite-web
     ports:
-      - 5001:5001
-    container_name: camino-suite-host-container
-
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
