@@ -219,17 +219,24 @@ export const usePartnerConfig = () => {
                 'getRoleMemberCount',
                 CMACCOUNT_ROLE,
             )
-            let i = 0
-            while (i < roleMemberCount) {
-                managerReadContract.getRoleMember(CMACCOUNT_ROLE, i).then(async role => {
-                    readFromContract('manager', 'getCMAccountCreator', role).then(creator => {
-                        if (creator === wallet.address) {
-                            setContractCMAccountAddress(role)
-                            dispatch(updateCMAcocuntContract(role))
-                        }
-                    })
-                })
-                i++
+            // Find the FIRST CMAccount created by this wallet and stop. This used to be a
+            // fire-and-forget parallel loop that called setContractCMAccountAddress for EVERY
+            // match — so a wallet owning multiple CMAccounts saw the displayed address flip
+            // between them (last unordered promise wins). Sequential + guarded + case-insensitive.
+            const total = Number(roleMemberCount || 0)
+            const me = wallet.address?.toLowerCase()
+            for (let i = 0; i < total; i++) {
+                try {
+                    const role = await managerReadContract.getRoleMember(CMACCOUNT_ROLE, i)
+                    const creator = await readFromContract('manager', 'getCMAccountCreator', role)
+                    if (creator && creator.toLowerCase() === me) {
+                        setContractCMAccountAddress(role)
+                        dispatch(updateCMAcocuntContract(role))
+                        break
+                    }
+                } catch (e) {
+                    // skip flaky entry
+                }
             }
             if (isNewImpl) {
                 const { sft, requiredSftAmount } = await getSftContract()
