@@ -95,10 +95,49 @@ kept for undo/redo. Newest entries at the bottom. See `docs/PHASE1-PLAN.md` for 
   ~$4–6/mo; Base Sepolia public RPC = no node infra). `docker compose config` validates.
 - `ttm/partner-showroom-api` has its own backdated git history (5 commits, 2026-06-24 → 06-30).
 
-## Status: Phase 1 complete
-Showroom (244 partners) + connect MetaMask + self-service Messenger config on Base Sepolia,
-all in the browser. Remaining manual check: MetaMask *write* flows (create CMAccount / edit
-services / bots) need a funded Base Sepolia wallet.
+## Post-verification fixes (manual browser testing on Base Sepolia)
+- **RPC batching:** all `JsonRpcProvider`s use `{ batchMaxCount: 1 }` — the public
+  `sepolia.base.org` returns bad data for batched `eth_call`s (CALL_EXCEPTION on calls that
+  succeed individually). Enumerations are sequential + per-item try/catch.
+- **Create Messenger Account unblocked:**
+  - Removed the legacy `min 100 CAM` rule (`Input.tsx`) — TTM prefund is native ETH, optional
+    (verified against the reference `camino-messenger-contracts/ui` `CreateAccount.tsx`).
+  - `GAS_FALLBACK` 0.5 → 0.001 ETH (the CAM-scale reserve exceeded a whole ETH balance,
+    forcing maxAvailable=0 and disabling the button).
+  - Shim stores the address as **bare hex** (`setConnected`) — the suite does `'0x' + ethAddress`
+    everywhere, so a stored `0x…` produced a broken `0x0x…` in balance/matching.
+  - Relabeled CAM → ETH across the amount input + create copy; header (`ConnectWallet`) now
+    shows the connected wallet's live ETH balance; the "required" box explains gas + optional prefund.
+- **Error masking:** guarded all 10 `interface.parseError(error.data)` calls with `|| "0x"` —
+  when an error had no `.data`, `parseError(null)` itself threw "invalid BytesLike value=null",
+  hiding the real revert reason.
+- **Address flip-flop:** `usePartnerConfig.isCMAccount` was a fire-and-forget parallel loop that
+  called `setContractCMAccountAddress` for EVERY CMAccount owned by the wallet → the "My Messenger
+  Account" address flipped between accounts. Now sequential, picks the first match, breaks.
+- **CI + docs:** removed legacy suite workflows (AWS/ECR/cypress); rewrote `README.md`; added
+  `CLAUDE.md` to both repos.
+- **On-chain verification:** wallet `0x5d30…f890` created CMAccounts `0x40C6…D8f3` and
+  `0x25183D…e319`, each deployed + prefunded with 0.005 ETH (count 12 → 14). Full write path proven.
+
+## Session persistence + config-page polish (browser-driven, hands-off)
+- **Wallet session now survives reload.** `useMetaMask` calls `eth_accounts` on mount and
+  auto-reconnects silently if the site is already permitted — previously a refresh dropped
+  `isAuth` and bounced the user off config pages to the Showroom.
+- **Redirect race fixed.** `PartnersLayout` has a 1.5s "Connecting wallet…" grace window so it
+  doesn't redirect config pages before the async reconnect resolves.
+- **No Create-form flash.** `usePartnerConfig.checkingAccount` + a "Checking for an existing
+  Messenger Account…" loader in `Configuration` while the on-chain scan runs.
+- **MyMessenger labels for Base:** "Blockchain Transaction Fee Currency" CAM → **ETH**;
+  "Messenger Fee Currency" stuck "Loading…" → **"Not configured on Base Sepolia"** (no
+  manager-level service-fee token on TTM).
+- Verified in a real Chrome (connected as `0x5d30…f890`): reload keeps the session, lands on
+  My Messenger Account showing the stable CMAccount `0x40C6…D8f3`, ETH fee label, all tabs
+  present. Offered/Wanted/Bots correctly "None" (nothing added yet). Only console line is a
+  benign, handled `estimateGas` fallback warning.
+
+## Status: Phase 1 core complete
+Showroom (244 partners) + connect MetaMask + self-service Messenger config + **on-chain CMAccount
+creation/prefund** all working on Base Sepolia in the browser.
 
 ## Companion repo
 - `ttm/partner-showroom-api` — Express dummy Strapi (built by agent): 244 partners seeded
