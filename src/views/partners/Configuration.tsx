@@ -180,8 +180,8 @@ const Content = () => {
                         <Box sx={{ mb: 2, width: '100%' }}>
                             <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
                                 {!isNewImpl
-                                    ? `Initial CAM funding (min ${partnerConfig.prefundAmount} CAM)`
-                                    : 'Initial CAMs funding'}
+                                    ? `Initial funding (min ${partnerConfig.prefundAmount} ETH)`
+                                    : 'Initial funding'}
                             </Typography>
                             <Input />
                         </Box>
@@ -300,8 +300,8 @@ const Content = () => {
                             sx={{ maxWidth: 'none', width: 'fit-content' }}
                             variant="negative"
                             content={`You need at least ${gasReserve.toFixed(
-                                3,
-                            )} CAM in your wallet to pay for transaction fees.`}
+                                4,
+                            )} ETH in your wallet to pay for transaction fees.`}
                         />
                     </Box>
                 )}
@@ -326,8 +326,10 @@ const Content = () => {
                 {state.step === 0 && (
                     <Alert
                         variant="info"
-                        title={`${partnerConfig.prefundAmount} ${partnerConfig.sftSymbol} required`}
-                        content={`A minimum deposit of ${partnerConfig.prefundAmount} ${partnerConfig.sftSymbol} is required. Please ensure that your connected Wallet has sufficient ${partnerConfig.sftSymbol}.`}
+                        title={`Wallet balance: ${Number(balance || 0).toFixed(4)} ETH`}
+                        content={`Creating a Messenger Account is a payable transaction on Base Sepolia. The initial funding (prefund) is optional and can be topped up later — you only need enough ETH to cover gas (≈ ${gasReserve.toFixed(
+                            4,
+                        )} ETH estimated).`}
                     />
                 )}
             </Box>

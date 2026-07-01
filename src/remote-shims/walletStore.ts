@@ -82,7 +82,9 @@ const store: any = {
 export function setConnected(address: string | null) {
     if (address) {
         state.isAuth = true
-        activeWallet.ethAddress = address
+        // Store the address WITHOUT the 0x prefix: the suite consistently does
+        // `'0x' + activeWallet.ethAddress`, so keeping 0x here yields a broken `0x0x…`.
+        activeWallet.ethAddress = address.replace(/^0x/i, '')
         state.wallets = [activeWallet]
     } else {
         state.isAuth = false

@@ -15,7 +15,7 @@ function clampMinZero(n: number) {
     return n > 0 ? n : 0
 }
 
-const GAS_FALLBACK = 0.5 // CAM fallback if estimation fails
+const GAS_FALLBACK = 0.001 // ETH reserve fallback if estimation fails (Base gas is cheap)
 
 const Input = ({ ...rest }) => {
     const { state, dispatch } = usePartnerConfigurationContext()
@@ -93,20 +93,15 @@ const Input = ({ ...rest }) => {
             }
         }
 
-        if (!isNewImpl && balance < 100) {
-            return {
-                isValid: false,
-                error: 'Minimum amount required for the old implementation is 100 CAM',
-                showIcon: true,
-            }
-        }
+        // Base Sepolia: the CMAccount prefund is native ETH via payable createCMAccount —
+        // there is no 100-CAM minimum (that was the legacy Camino service-fee-token model).
 
         if (balance > maxAvailable) {
             return {
                 isValid: false,
                 error: `Amount cannot exceed ${maxAvailable.toFixed(
                     4,
-                )} CAM (you need to keep ${reserve.toFixed(4)} CAM for gas fees)`,
+                )} ETH (keep ~${reserve.toFixed(4)} ETH for gas fees)`,
                 showIcon: true,
             }
         }
