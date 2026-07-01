@@ -135,6 +135,25 @@ kept for undo/redo. Newest entries at the bottom. See `docs/PHASE1-PLAN.md` for 
   present. Offered/Wanted/Bots correctly "None" (nothing added yet). Only console line is a
   benign, handled `estimateGas` fallback warning.
 
+## NEXT SESSION — config tabs not yet working (verify + fix)
+The Showroom, connect (persistent), and CMAccount create/prefund are done. These config
+sub-tabs still need work (currently non-functional / unverified on Base Sepolia):
+- **Balances tab** — handle **EURe** (and other ERC-20 payment token) balances: read the
+  CMAccount's supported tokens + balances, top-up/withdraw. Currently the accepted-currency /
+  balance display is legacy CAM-centric.
+- **Offered Services** — list current offered services and **add / remove** them
+  (`addService(name, restrictedRate, capabilities)` / `removeService`, `setServiceRestrictedRate`,
+  `setServiceCapabilities`). Not working.
+- **Wanted Services** — list + **add / remove** (`addWantedServices` / `removeWantedServices`).
+  Not working.
+- **Manage Bots** — list + **add / remove** bots (`addMessengerBot` / `removeMessengerBot`,
+  `MESSENGER_BOT_ROLE`). Not working.
+Approach: same as create — drive hands-off in a real Chrome (wallet stays connected),
+reconcile each read/write against the TTM CMAccount ABI + the reference
+`../camino-messenger-contracts/ui` tabs (Services/PaymentTokens/Bots), verify each write lands
+on-chain. Watch for the same gotchas: ABI drift, ETH-not-CAM labels, public-RPC batching, and
+guarded error handling.
+
 ## Status: Phase 1 core complete
 Showroom (244 partners) + connect MetaMask + self-service Messenger config + **on-chain CMAccount
 creation/prefund** all working on Base Sepolia in the browser.
