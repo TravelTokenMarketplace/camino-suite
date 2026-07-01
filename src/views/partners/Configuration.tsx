@@ -115,6 +115,28 @@ const Content = () => {
 
     if (contractCMAccountAddress) return <MyMessenger />
 
+    // While we scan the chain for a CMAccount owned by this wallet, show a loader instead
+    // of briefly flashing the "Create" form (which then swaps to MyMessenger once found).
+    if (partnerConfig.checkingAccount) {
+        return (
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    minHeight: '240px',
+                }}
+            >
+                <CircularProgress size={24} thickness={2} />
+                <Typography variant="body2">
+                    Checking for an existing Messenger Account…
+                </Typography>
+            </Box>
+        )
+    }
+
     const isDisabled =
         (!store.getters['Accounts/kycStatus'] && !store.getters['Accounts/kybStatus']) ||
         !partnerConfig.hasEnoughTokens ||

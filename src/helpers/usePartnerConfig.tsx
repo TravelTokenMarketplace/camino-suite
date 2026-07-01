@@ -258,12 +258,21 @@ export const usePartnerConfig = () => {
         }
     }, [account, managerReadContract])
 
+    const [checkingAccount, setCheckingAccount] = useState(true)
+
     useEffect(() => {
         if (readFromContract && provider) getSftContract()
     }, [readFromContract, provider])
 
     useEffect(() => {
-        if (wallet && auth) isCMAccount()
+        if (wallet && auth) {
+            setCheckingAccount(true)
+            isCMAccount()
+                .finally(() => setCheckingAccount(false))
+                .catch(() => {})
+        } else {
+            setCheckingAccount(false)
+        }
     }, [wallet, activeNetwork])
 
     const addServices = useCallback(
@@ -636,6 +645,7 @@ export const usePartnerConfig = () => {
     }, [account, readFromContract])
 
     return {
+        checkingAccount,
         allowance,
         prefundAmount,
         sftSymbol,

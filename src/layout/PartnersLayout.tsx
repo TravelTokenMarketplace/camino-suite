@@ -1,5 +1,5 @@
-import { Box, Button, Link, Toolbar, Typography } from '@mui/material'
-import React, { useEffect, useMemo } from 'react'
+import { Box, Button, CircularProgress, Link, Toolbar, Typography } from '@mui/material'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Navigate, Outlet, useNavigate, useParams } from 'react-router'
 import { useAppDispatch, useAppSelector } from '../hooks/reduxHooks'
 import { fetchBusinessFields, fetchPartners } from '../redux/slices/partnersSlice/utils'
@@ -100,6 +100,14 @@ const PartnersLayout = () => {
     }, [activeNetwork, dispatch])
 
     const auth = useAppSelector(state => state.appConfig.isAuth)
+    // Grace window: MetaMask auto-reconnect (eth_accounts) resolves a beat after mount, so
+    // don't redirect config pages back to the Showroom until we've given it a chance.
+    const [authGrace, setAuthGrace] = useState(true)
+    useEffect(() => {
+        const t = setTimeout(() => setAuthGrace(false), 1500)
+        return () => clearTimeout(t)
+    }, [])
+
     useEffect(() => {
         if (
             walletName &&
@@ -111,8 +119,9 @@ const PartnersLayout = () => {
     }, [walletName])
 
     useEffect(() => {
-        if (!auth && path.includes('partners/messenger-configuration')) navigate('/partners')
-    }, [auth, path])
+        if (!authGrace && !auth && path.includes('partners/messenger-configuration'))
+            navigate('/partners')
+    }, [auth, path, authGrace])
 
     const partnerCChainAddress = useMemo(() => {
         let cAddress = data?.attributes?.cChainAddresses.find(
@@ -121,7 +130,24 @@ const PartnersLayout = () => {
         if (cAddress) return cAddress
         return ''
     }, [data])
-    if (path.includes('partners/messenger-configuration') && !store.state.isAuth) {
+    if (path.includes('partners/messenger-configuration') && !auth) {
+        // Still inside the reconnect grace window → show a loader instead of bouncing.
+        if (authGrace) {
+            return (
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '12px',
+                        minHeight: '60vh',
+                    }}
+                >
+                    <CircularProgress size={24} thickness={2} />
+                    <Typography variant="body2">Connecting wallet…</Typography>
+                </Box>
+            )
+        }
         return <Navigate to="/partners" replace />
     }
 

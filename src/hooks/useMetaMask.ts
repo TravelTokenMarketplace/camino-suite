@@ -74,6 +74,14 @@ export default function useMetaMask() {
     useEffect(() => {
         const eth = (window as any).ethereum
         if (!eth?.on) return
+        // Restore the session on load if the wallet already granted permission for this
+        // site (silent — no prompt). Without this, a page refresh drops `isAuth` and
+        // bounces the user off the config pages back to the Showroom.
+        eth.request({ method: 'eth_accounts' })
+            .then((accounts: string[]) => {
+                if (accounts && accounts.length > 0) setAuthed(accounts[0])
+            })
+            .catch(() => {})
         const onAccountsChanged = (accounts: string[]) => {
             if (!accounts || accounts.length === 0) setAuthed(null)
             else setAuthed(accounts[0])
