@@ -55,7 +55,7 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
             setAccountWriteContract(accountWritableContract)
             return { success: true, message: 'All operations completed successfully' }
         } catch (error) {
-            const decodedError = accountWritableContract.interface.parseError(error.data)
+            const decodedError = accountWritableContract.interface.parseError(error?.data || "0x")
             console.error('Message:', error.message)
             console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
             return { success: false, error: error.message }
@@ -99,7 +99,7 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
                 return false
             }
         } catch (error) {
-            const decodedError = accountWriteContract.interface.parseError(error.data)
+            const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
             console.error('Message:', error.message)
             console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
         }
@@ -114,7 +114,7 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
                 return receipt
             }
         } catch (error) {
-            const decodedError = accountWriteContract.interface.parseError(error.data)
+            const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
             console.error('Message:', error.message)
             console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
         }

@@ -137,7 +137,7 @@ const Input = ({ ...rest }) => {
                             color: theme => theme.palette.text.primary,
                         }}
                     >
-                        <Typography variant="body2">CAMs Amount:</Typography>
+                        <Typography variant="body2">ETH Amount:</Typography>
                     </InputAdornment>
                 }
                 endAdornment={
@@ -239,7 +239,7 @@ const Input = ({ ...rest }) => {
                         color: 'success.main',
                     }}
                 >
-                    ✓ Valid amount (Max available: {maxAvailable.toFixed(4)} CAM
+                    ✓ Valid amount (Max available: {maxAvailable.toFixed(4)} ETH
                     {gasReady ? '' : ' • using fallback'})
                 </Typography>
             )}

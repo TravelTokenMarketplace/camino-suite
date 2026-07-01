@@ -137,7 +137,7 @@ export const usePartnerConfig = () => {
             await CMAccountCreated(cmAccountAddress)
             return tx
         } catch (error) {
-            const decodedError = managerWriteContract.interface.parseError(error.data)
+            const decodedError = managerWriteContract.interface.parseError(error?.data || "0x")
             console.error('Message:', error.message)
             console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
             console.error(error)
@@ -465,7 +465,7 @@ export const usePartnerConfig = () => {
             const hasRole = await accountReadContract.hasRole(WITHDRAWER_ROLE, wallet.address)
             return hasRole
         } catch (error) {
-            const decodedError = accountWriteContract.interface.parseError(error.data)
+            const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
             console.error('Message:', error.message)
             console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
         }
@@ -481,7 +481,7 @@ export const usePartnerConfig = () => {
             await tx.wait()
             return tx
         } catch (error) {
-            const decodedError = accountWriteContract.interface.parseError(error.data)
+            const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
             console.error('Message:', error.message)
             console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
         }
@@ -498,7 +498,7 @@ export const usePartnerConfig = () => {
                 await tx.wait()
                 return tx
             } catch (error) {
-                const decodedError = accountWriteContract.interface.parseError(error.data)
+                const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
                 console.error('Message:', error.message)
                 console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
             }
@@ -530,7 +530,7 @@ export const usePartnerConfig = () => {
                 )
                 await tx.wait()
             } catch (error) {
-                const decodedError = accountWriteContract.interface.parseError(error.data)
+                const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
                 console.error('Message:', error.message)
                 console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
             }
@@ -584,7 +584,7 @@ export const usePartnerConfig = () => {
                 const receipt = await tx.wait()
                 return receipt
             } catch (error) {
-                const decodedError = accountWriteContract.interface.parseError(error.data)
+                const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
                 console.error('Message:', error.message)
                 console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
                 throw error
@@ -605,7 +605,7 @@ export const usePartnerConfig = () => {
                 const receipt = await tx.wait()
                 return receipt
             } catch (error) {
-                const decodedError = accountWriteContract.interface.parseError(error.data)
+                const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
                 console.error('Message:', error.message)
                 console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
                 throw error
