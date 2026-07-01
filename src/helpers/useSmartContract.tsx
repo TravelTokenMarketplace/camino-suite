@@ -8,11 +8,7 @@ import React, {
     useState,
 } from 'react'
 import { useNavigate } from 'react-router'
-import store from 'wallet/store'
-import {
-    CONTRACTCMACCOUNTMANAGERADDRESSCAMINO,
-    CONTRACTCMACCOUNTMANAGERADDRESSCOLUMBUS,
-} from '../constants/apps-consts'
+import store, { getSigner } from 'wallet/store'
 import { useAppSelector } from '../hooks/reduxHooks'
 import { getActiveNetwork } from '../redux/slices/network'
 import CMAccount from './CMAccountManagerModule#CMAccount.json'
@@ -126,29 +122,21 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
 
     const initializeEthers = async () => {
         const selectedNetwork = store.getters['Network/selectedNetwork']
-        const ethersProvider = new ethers.JsonRpcProvider(
-            `${selectedNetwork.protocol}://${selectedNetwork.ip}:${selectedNetwork.port}/ext/bc/C/rpc`,
-        )
+        // Base Sepolia: flat EVM RPC (no /ext/bc/C/rpc), single CMAccountManager address.
+        const ethersProvider = new ethers.JsonRpcProvider(selectedNetwork.rpcUrl)
         try {
-            if (
-                activeNetwork?.name?.toLowerCase() !== 'columbus' &&
-                activeNetwork?.name?.toLowerCase() !== 'camino'
-            )
-                return
-            let contractAddress =
-                activeNetwork?.name?.toLowerCase() === 'columbus'
-                    ? CONTRACTCMACCOUNTMANAGERADDRESSCOLUMBUS
-                    : CONTRACTCMACCOUNTMANAGERADDRESSCAMINO
+            let contractAddress = selectedNetwork.managerAddress
             if (auth) {
-                const wallet = new ethers.Wallet(store.state.activeWallet?.ethKey, ethersProvider)
+                // Signer comes from the injected wallet (MetaMask), not a stored key.
+                const signer = await getSigner()
                 const managerWritableContract = new ethers.Contract(
                     contractAddress,
                     CMAccountManager.abi,
-                    wallet,
+                    signer,
                 )
                 setManagerWriteContract(managerWritableContract)
-                setWallet(wallet)
-                setAccount(wallet.address)
+                setWallet(signer)
+                setAccount(await signer.getAddress())
             }
             const managerReadOnlyContract = new ethers.Contract(
                 contractAddress,
@@ -165,10 +153,7 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
                     )
 
                     const result = await ethersProvider.call({
-                        to:
-                            activeNetwork?.name?.toLowerCase() === 'columbus'
-                                ? CONTRACTCMACCOUNTMANAGERADDRESSCOLUMBUS
-                                : CONTRACTCMACCOUNTMANAGERADDRESSCAMINO,
+                        to: contractAddress,
                         data,
                     })
 
@@ -185,10 +170,7 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
     const navigate = useNavigate()
     const path = window.location.pathname
     useEffect(() => {
-        if (
-            activeNetwork?.name?.toLowerCase() === 'columbus' ||
-            activeNetwork?.name?.toLowerCase() === 'camino'
-        ) {
+        if (activeNetwork) {
             setAccountReadContract(null)
             setAccountWriteContract(null)
             if (

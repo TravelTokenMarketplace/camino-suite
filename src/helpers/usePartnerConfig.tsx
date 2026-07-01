@@ -184,16 +184,16 @@ export const usePartnerConfig = () => {
 
     const getListOfBots = useCallback(async () => {
         try {
-            const CHEQUE_OPERATOR_ROLE = await readFromContract('account', 'CHEQUE_OPERATOR_ROLE')
+            const MESSENGER_BOT_ROLE = await readFromContract('account', 'MESSENGER_BOT_ROLE')
             const roleMemberCount = await readFromContract(
                 'account',
                 'getRoleMemberCount',
-                CHEQUE_OPERATOR_ROLE,
+                MESSENGER_BOT_ROLE,
             )
 
             const botPromises = []
             for (let i = 0; i < roleMemberCount; i++) {
-                botPromises.push(accountReadContract.getRoleMember(CHEQUE_OPERATOR_ROLE, i))
+                botPromises.push(accountReadContract.getRoleMember(MESSENGER_BOT_ROLE, i))
             }
 
             const bots = await Promise.all(botPromises)

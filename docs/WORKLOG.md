@@ -45,13 +45,28 @@ kept for undo/redo. Newest entries at the bottom. See `docs/PHASE1-PLAN.md` for 
 - Simplified `Footer/Version.tsx` (Suite version only).
 - **Webpack build green** (`webpack --config webpack.dev.js` → compiled successfully).
 
+## A3 — Repoint on-chain to Base Sepolia (done)
+- Swapped ABIs: `helpers/CMAccountManagerModule#CMAccount.json` (TTM CMAccount, bare array,
+  71 fns) and `helpers/ManagerProxyModule#CMAccountManager.json` (TTM manager wrapped as
+  `{abi:[...]}`, 37 fns). Both from `ttm/camino-messenger-contracts/abi/contracts/`.
+- `helpers/useSmartContract.tsx`: RPC → `selectedNetwork.rpcUrl`; manager → `selectedNetwork.managerAddress`
+  (Base Sepolia `0xEcf9b5ca…FacE9` via shim); dropped columbus/camino gate (`if (activeNetwork)`);
+  **signer from MetaMask** (`getSigner()`) instead of `new ethers.Wallet(ethKey)`.
+- Bot-role drift fixed: `CHEQUE_OPERATOR_ROLE` → `MESSENGER_BOT_ROLE` in `partners.ts` +
+  `usePartnerConfig.tsx` (TTM CMAccount role name). `createCMAccount(admin,upgrader){value}`
+  already matched TTM's payable signature.
+- `redux/services/partners.ts`: showroom enumeration RPC/manager repointed; P-chain helpers
+  left stubbed (caminoClient shim) → no validators on Base (correct).
+
+## A5 — Strapi → dummy API (done)
+- `partners.ts` BASE_URLS/BUSINESS_BASE_URLS + `constants/route-paths.ts` CAMINO_STRAPI now use
+  `process.env.STRAPI_BASE_URL || http://localhost:1337`. Frontend consumes the same envelope.
+- `constants/apps-consts.ts`: APPS_CONSTS reduced to Network + Partners.
+- **Webpack build green** after repoint.
+
 ## TODO (next)
-- A3 repoint: swap ABIs (TTM), Base Sepolia manager `0xEcf9b5ca…FacE9`, RPC; reconcile
-  bots role + createCMAccount; write signer from MetaMask. Files: `redux/services/partners.ts`,
-  `redux/slices/partner.ts`, `helpers/*CMAccount*.json`, `constants/apps-consts.ts`.
-- A5: point Strapi calls → dummy API (`partners.ts` BASE_URLS + `constants/route-paths.ts`).
-- Reduce `apps-consts.ts` APPS_CONSTS to Partners; relabel network badge.
-- Verify runtime in browser; docker-compose; backdated commits.
+- Runtime verify in browser (showroom loads from dummy API; connect MetaMask; My Partner Profile).
+- docker-compose (suite + api); deploy notes; remaining backdated commits.
 
 ## Companion repo
 - `ttm/partner-showroom-api` — Express dummy Strapi (built by agent): 244 partners seeded

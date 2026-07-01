@@ -14,7 +14,9 @@ export const GITHUB = 'https://github.com/chain4travel/'
 
 export const CAMINO = 'https://camino.network/'
 
-export const CAMINO_STRAPI = 'https://api.strapi.camino.network/'
+// Media (partner logos etc.) served by the local dummy Strapi (partner-showroom-api).
+export const CAMINO_STRAPI =
+    (process.env.STRAPI_BASE_URL || 'http://localhost:1337') + '/'
 
 export const X = 'https://twitter.com/camino_network'
 

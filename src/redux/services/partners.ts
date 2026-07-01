@@ -12,14 +12,18 @@ import CMAccount from '../../helpers/CMAccountManagerModule#CMAccount.json'
 import CMAccountManager from '../../helpers/ManagerProxyModule#CMAccountManager.json'
 import { BusinessField } from '../../helpers/partnersReducer'
 
+// Partner CMS data now comes from the local "dummy Strapi" (partner-showroom-api),
+// which reproduces the Strapi v4 envelope. Override with STRAPI_BASE_URL at build time.
+const STRAPI_BASE = process.env.STRAPI_BASE_URL || 'http://localhost:1337'
+
 const BASE_URLS = {
-    dev: 'https://dev.strapi.camino.network/api/partners',
-    prod: 'https://api.strapi.camino.network/partners',
+    dev: `${STRAPI_BASE}/api/partners`,
+    prod: `${STRAPI_BASE}/api/partners`,
 }
 
 const BUSINESS_BASE_URLS = {
-    dev: 'https://dev.strapi.camino.network/api/business-fields',
-    prod: 'https://api.strapi.camino.network/business-fields',
+    dev: `${STRAPI_BASE}/api/business-fields`,
+    prod: `${STRAPI_BASE}/api/business-fields`,
 }
 
 function createPartnerContract(address: string, provider: ethers.Provider) {
@@ -33,12 +37,12 @@ function createPartnerContract(address: string, provider: ethers.Provider) {
 
 const getListOfBots = async contract => {
     try {
-        const CHEQUE_OPERATOR_ROLE = await contract.CHEQUE_OPERATOR_ROLE()
-        const roleMemberCount = await contract.getRoleMemberCount(CHEQUE_OPERATOR_ROLE)
+        const MESSENGER_BOT_ROLE = await contract.MESSENGER_BOT_ROLE()
+        const roleMemberCount = await contract.getRoleMemberCount(MESSENGER_BOT_ROLE)
 
         const botPromises = []
         for (let i = 0; i < roleMemberCount; i++) {
-            botPromises.push(contract.getRoleMember(CHEQUE_OPERATOR_ROLE, i))
+            botPromises.push(contract.getRoleMember(MESSENGER_BOT_ROLE, i))
         }
 
         const bots = await Promise.all(botPromises)
@@ -91,12 +95,8 @@ async function fetchContractServices(contractAddress: string, provider: ethers.P
 
 async function getContractMappings(): Promise<Map<string, string>> {
     const selectedNetwork = store.getters['Network/selectedNetwork']
-    const providerUrl = `${selectedNetwork.protocol}://${selectedNetwork.ip}:${selectedNetwork.port}/ext/bc/C/rpc`
-    const provider = new ethers.JsonRpcProvider(providerUrl)
-    let contractAddress =
-        selectedNetwork.name.toLowerCase() === 'columbus'
-            ? CONTRACTCMACCOUNTMANAGERADDRESSCOLUMBUS
-            : CONTRACTCMACCOUNTMANAGERADDRESSCAMINO
+    const provider = new ethers.JsonRpcProvider(selectedNetwork.rpcUrl)
+    let contractAddress = selectedNetwork.managerAddress
     const managerReadOnlyContract = new ethers.Contract(
         contractAddress,
         CMAccountManager.abi,

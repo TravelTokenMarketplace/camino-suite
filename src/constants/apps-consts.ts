@@ -1,3 +1,4 @@
+// Partners-only dApp: Wallet / Explorer / Governance sections were removed.
 export const APPS_CONSTS = [
     {
         name: 'Network',
@@ -7,42 +8,10 @@ export const APPS_CONSTS = [
         hidden: true,
     },
     {
-        name: 'Wallet',
-        subText: 'Secure, non-custodial wallet for Camino Assets.',
-        url: '/wallet',
-        private: false,
-    },
-    {
-        name: 'Explorer',
-        subText: 'Lookup network activity and statistics.',
-        url: '/explorer',
-        private: false,
-    },
-    {
-        name: 'Governance',
-        subText: 'Participate and vote on proposals.',
-        url: '/dac',
-        private: false,
-    },
-    {
-        name: 'Foundation',
-        subText: 'Tools for foundation members.',
-        url: '/foundation',
-        private: true,
-        hidden: true,
-    },
-    {
         name: 'Partners',
         subText: 'Partners of the Camino Network.',
         url: '/partners',
         private: false,
-    },
-    {
-        name: 'Settings',
-        subText: 'Manage your wallet settings.',
-        url: '/settings',
-        private: true,
-        hidden: true,
     },
 ]
 
