@@ -54,7 +54,7 @@ const state: any = {
 
 // Vuex-style getters. Most are plain values; `staticAddresses` is a method getter.
 const getters: any = {
-    'Network/allNetworks': [BASE_SEPOLIA, BASE_SEPOLIA],
+    'Network/allNetworks': [BASE_SEPOLIA],
     'Network/selectedNetwork': BASE_SEPOLIA,
     'Assets/networkErc20Tokens': [] as any[],
     'Accounts/kycStatus': true,

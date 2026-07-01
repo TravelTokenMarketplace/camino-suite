@@ -247,7 +247,9 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
         ...args: any[]
     ) => {
         const contract = contractType === 'manager' ? managerReadContract : accountReadContract
-        if (!contract) {
+        // Guard against ABI drift (c4t -> ttm): if a method no longer exists on the
+        // Base Sepolia contract, degrade to undefined instead of crashing the app.
+        if (!contract || typeof contract[method] !== 'function') {
             return
         }
 
@@ -266,7 +268,7 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
         ...args: any[]
     ) => {
         const contract = contractType === 'manager' ? managerWriteContract : accountWriteContract
-        if (!contract) {
+        if (!contract || typeof contract[method] !== 'function') {
             return
         }
 

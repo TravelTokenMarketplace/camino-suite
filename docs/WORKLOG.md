@@ -64,8 +64,19 @@ kept for undo/redo. Newest entries at the bottom. See `docs/PHASE1-PLAN.md` for 
 - `constants/apps-consts.ts`: APPS_CONSTS reduced to Network + Partners.
 - **Webpack build green** after repoint.
 
+## Runtime verification + fixes (browser)
+- Ran dummy API (:1337) + suite dev-server (:5001). Showroom renders **244 partners** from
+  the dummy API — matches the original Suite (branding, cards, filters, "Register As Partner").
+- Fixed runtime crashes from ABI drift:
+  - `usePartnerConfig.getSftContract` read legacy `getPrefundAmount`/`getServiceFeeToken`
+    (absent on TTM manager) → short-circuited to native-ETH defaults.
+  - Hardened `useSmartContract.readFromContract/writeToContract` to no-op on missing methods.
+  - Shim `Network/allNetworks` → single entry (killed duplicate-key warning in NetworkSwitcher).
+- Fixed broken partner logos: `CAMINO_STRAPI` had a trailing slash → `//uploads` 404 on
+  express.static; dropped the slash (urls already start with `/uploads/`).
+
 ## TODO (next)
-- Runtime verify in browser (showroom loads from dummy API; connect MetaMask; My Partner Profile).
+- Re-verify logos load; connect MetaMask; My Partner Profile tab.
 - docker-compose (suite + api); deploy notes; remaining backdated commits.
 
 ## Companion repo

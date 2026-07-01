@@ -40,6 +40,14 @@ export const usePartnerConfig = () => {
     const [hasEnoughTokens, setHasEnoughTokens] = useState<boolean>(false)
     const { balanceWei } = useWalletBalance()
     const getSftContract = useCallback(async () => {
+        // Base Sepolia: the CMAccount prefund is native ETH (payable createCMAccount).
+        // There is no manager-level service-fee token / getPrefundAmount, so set native
+        // defaults and skip the legacy reads below (which would revert on the TTM manager).
+        setSftSymbol('ETH')
+        setPrefundAmount('0')
+        setHasEnoughTokens(true)
+        return
+        // eslint-disable-next-line no-unreachable
         if (!isNewImpl) {
             const prefundAmount = await readFromContract('manager', 'getPrefundAmount')
             setPrefundAmount(ethers.formatUnits(prefundAmount, 18))
