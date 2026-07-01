@@ -111,7 +111,7 @@ const PartnersLayout = () => {
     }, [walletName])
 
     useEffect(() => {
-        if (!auth && path.includes('partners/messenger-configuration')) navigate('/login')
+        if (!auth && path.includes('partners/messenger-configuration')) navigate('/partners')
     }, [auth, path])
 
     const partnerCChainAddress = useMemo(() => {
@@ -121,13 +121,8 @@ const PartnersLayout = () => {
         if (cAddress) return cAddress
         return ''
     }, [data])
-    if (
-        path.includes('partners/messenger-configuration') &&
-        !store.state.isAuth &&
-        (activeNetwork?.name?.toLowerCase() !== 'columbus' ||
-            activeNetwork?.name?.toLowerCase() !== 'camino')
-    ) {
-        return <Navigate to="/login" replace />
+    if (path.includes('partners/messenger-configuration') && !store.state.isAuth) {
+        return <Navigate to="/partners" replace />
     }
 
     return (
@@ -166,9 +161,7 @@ const PartnersLayout = () => {
                     >
                         <Links />
                     </Toolbar>
-                    {((path.includes('partners/messenger-configuration') &&
-                        !!data &&
-                        partnerCChainAddress) ||
+                    {((path.includes('partners/messenger-configuration') && auth) ||
                         (partner &&
                             partner?.contractAddress &&
                             partnerID === partner.attributes.companyName)) && (
@@ -195,9 +188,7 @@ const PartnersLayout = () => {
                     <Box
                         sx={{
                             mt:
-                                (path.includes('partners/messenger-configuration') &&
-                                    !!data &&
-                                    partnerCChainAddress) ||
+                                (path.includes('partners/messenger-configuration') && auth) ||
                                 (path !== '/partners' && partner?.contractAddress)
                                     ? '9rem'
                                     : '5rem',
@@ -209,10 +200,9 @@ const PartnersLayout = () => {
                         }}
                         component={Paper}
                     >
-                        {!path.includes('partners/messenger-configuration') ||
-                        (path.includes('partners/messenger-configuration') &&
-                            !!data &&
-                            partnerCChainAddress) ? (
+                        {/* Self-service on Base: any connected wallet manages its own
+                            Messenger Account directly — no Foundation "claim" gate. */}
+                        {!path.includes('partners/messenger-configuration') || auth ? (
                             <Outlet />
                         ) : (
                             <ClaimProfile />

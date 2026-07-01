@@ -37,7 +37,7 @@ export default function RoutesSuite() {
                 <Route path=":partnerID/bots" element={<BasicManageBots />} />
                 <Route path=":partnerID" element={<Partner />} />
                 <Route path="messenger-configuration">
-                    <Route index element={<Partner />} />
+                    <Route index element={<Navigate to="mymessenger" replace />} />
                     <Route path="mymessenger" element={<Overreview />} />
                     <Route path="mydetails" element={<Partner />} />
                     <Route path="balances" element={<Balances />} />
