@@ -104,22 +104,25 @@ async function getContractMappings(): Promise<Map<string, string>> {
     )
 
     const mappings = new Map<string, string>()
-    const CMACCOUNT_ROLE = await managerReadOnlyContract.CMACCOUNT_ROLE()
-    const roleMemberCount = await managerReadOnlyContract.getRoleMemberCount(CMACCOUNT_ROLE)
+    try {
+        const CMACCOUNT_ROLE = await managerReadOnlyContract.CMACCOUNT_ROLE()
+        const roleMemberCount = await managerReadOnlyContract.getRoleMemberCount(CMACCOUNT_ROLE)
 
-    const promises = []
-    for (let i = 0; i < roleMemberCount; i++) {
-        promises.push(
-            managerReadOnlyContract.getRoleMember(CMACCOUNT_ROLE, i).then(async role => {
+        // Sequential + per-item guard: the public Base Sepolia RPC rate-limits bursts
+        // (parallel calls come back empty -> ethers CALL_EXCEPTION), and an individual
+        // account can revert on getCMAccountCreator. Tolerate both instead of crashing.
+        for (let i = 0; i < Number(roleMemberCount); i++) {
+            try {
+                const role = await managerReadOnlyContract.getRoleMember(CMACCOUNT_ROLE, i)
                 const creator = await managerReadOnlyContract.getCMAccountCreator(role)
-                return { role, creator }
-            }),
-        )
+                mappings.set(role.toLowerCase(), creator.toLowerCase())
+            } catch (e) {
+                // skip flaky / reverting entry
+            }
+        }
+    } catch (e) {
+        console.warn('getContractMappings failed:', (e as any)?.shortMessage || (e as any)?.message)
     }
-    const results = await Promise.all(promises)
-    results.forEach(({ role, creator }) => {
-        mappings.set(role.toLowerCase(), creator.toLowerCase())
-    })
 
     return mappings
 }

@@ -199,24 +199,17 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
                 CMACCOUNT_ROLE,
             )
 
-            const promises = []
-            for (let i = 0; i < roleMemberCount; i++) {
-                promises.push(
-                    managerReadContract.getRoleMember(CMACCOUNT_ROLE, i).then(async role => {
-                        const creator = await readFromContract(
-                            'manager',
-                            'getCMAccountCreator',
-                            role,
-                        )
-                        return { role, creator }
-                    }),
-                )
+            // Sequential + per-item guard to avoid public-RPC rate-limit CALL_EXCEPTIONs
+            // when enumerating all CMAccounts (a burst of parallel calls comes back empty).
+            for (let i = 0; i < Number(roleMemberCount || 0); i++) {
+                try {
+                    const role = await managerReadContract.getRoleMember(CMACCOUNT_ROLE, i)
+                    const creator = await readFromContract('manager', 'getCMAccountCreator', role)
+                    if (role && creator) mappings.set(role.toLowerCase(), creator.toLowerCase())
+                } catch (e) {
+                    // skip flaky / reverting entry
+                }
             }
-
-            const results = await Promise.all(promises)
-            results.forEach(({ role, creator }) => {
-                mappings.set(role.toLowerCase(), creator.toLowerCase())
-            })
 
             const findAddress = query => {
                 query = query.toLowerCase()
@@ -236,8 +229,11 @@ export const SmartContractProvider: React.FC<SmartContractProviderProps> = ({ ch
                 getAllMappings: () => Object.fromEntries(mappings),
             }
         } catch (error) {
-            console.error('Error in getCMAccountMappings:', error)
-            throw error
+            console.warn(
+                'getCMAccountMappings failed:',
+                (error as any)?.shortMessage || (error as any)?.message,
+            )
+            return { findAddress: () => null, getAllMappings: () => ({}) }
         }
     }, [managerReadContract])
 
