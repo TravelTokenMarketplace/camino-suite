@@ -213,7 +213,7 @@ const MyMessenger = () => {
                             Blockchain Transaction Fee Currency
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Typography variant="caption">CAM</Typography>
+                            <Typography variant="caption">ETH</Typography>
                         </Box>
                     </Box>
 
@@ -239,7 +239,9 @@ const MyMessenger = () => {
                                 </Typography>
                             </Box>
                         ) : (
-                            <Typography variant="caption">Loading...</Typography>
+                            <Typography variant="caption">
+                                Not configured on Base Sepolia
+                            </Typography>
                         )}
                     </Box>
                 </Configuration>
