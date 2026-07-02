@@ -29,14 +29,35 @@ import useWalletBalance from '../../helpers/useWalletBalance'
 import { updateNotificationStatus } from '../../redux/slices/app-config'
 import { Configuration } from './Configuration'
 
-// Known payment tokens on Base Sepolia. Metadata/balances are still read
-// on-chain — this list only defines which tokens we surface by default.
-// EURe comes from the Monerium sandbox (sandbox.monerium.dev).
+// Preconfigured payment tokens on Base Sepolia — always shown in the tab.
+// Balances are read on-chain; the hardcoded metadata is the fallback so the
+// row still renders when the public RPC hiccups. EURe (Monerium sandbox,
+// sandbox.monerium.dev) is TTM's primary settlement currency.
 const KNOWN_TOKENS = [
-    { address: '0x29F37F6adCa168B79B8d9567eab9BE3fBF21db85', symbol: 'EURe' },
-    { address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', symbol: 'USDC' },
-    { address: '0x808456652fdb597867f38412077A9182bf77359F', symbol: 'EURC' },
-    { address: '0x4200000000000000000000000000000000000006', symbol: 'WETH' },
+    {
+        address: '0x29F37F6adCa168B79B8d9567eab9BE3fBF21db85',
+        symbol: 'EURe',
+        name: 'Monerium EURe',
+        decimal: 18,
+    },
+    {
+        address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+        symbol: 'USDC',
+        name: 'USDC',
+        decimal: 6,
+    },
+    {
+        address: '0x808456652fdb597867f38412077A9182bf77359F',
+        symbol: 'EURC',
+        name: 'EURC',
+        decimal: 6,
+    },
+    {
+        address: '0x4200000000000000000000000000000000000006',
+        symbol: 'WETH',
+        name: 'Wrapped Ether',
+        decimal: 18,
+    },
 ]
 
 export const Balances = () => {
@@ -218,18 +239,27 @@ export const Balances = () => {
 
             const knownLower = KNOWN_TOKENS.map(t => t.address.toLowerCase())
             const universe = [
-                ...KNOWN_TOKENS.map(t => t.address),
-                ...supported.filter(
-                    a => a !== ethers.ZeroAddress && !knownLower.includes(a.toLowerCase()),
-                ),
+                ...KNOWN_TOKENS,
+                ...supported
+                    .filter(a => a !== ethers.ZeroAddress && !knownLower.includes(a.toLowerCase()))
+                    .map(address => ({ address })),
             ]
 
             const fetched = []
-            for (const address of universe) {
+            for (const token of universe) {
                 try {
-                    fetched.push(await readToken(address, supportedLower))
+                    fetched.push(await readToken(token.address, supportedLower))
                 } catch (err) {
-                    console.error(`Error fetching token ${address}`, err)
+                    console.error(`Error fetching token ${token.address}`, err)
+                    // Preconfigured tokens still render on hardcoded metadata
+                    // when the RPC read fails; balance is simply unknown.
+                    if (token.symbol) {
+                        fetched.push({
+                            ...token,
+                            balance: '?',
+                            supported: supportedLower.includes(token.address.toLowerCase()),
+                        })
+                    }
                 }
             }
             setTokens(fetched)
