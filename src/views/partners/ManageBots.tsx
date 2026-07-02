@@ -11,6 +11,7 @@ import { getActiveNetwork } from '../../redux/slices/network'
 import { selectPartnerData } from '../../redux/selectors/partners'
 import { updateNotificationStatus } from '../../redux/slices/app-config'
 import { usePartnerConfig } from '../../helpers/usePartnerConfig'
+import { useSmartContract } from '../../helpers/useSmartContract'
 
 export const BasicManageBots = () => {
     const { partnerID } = useParams()
@@ -131,42 +132,73 @@ const ManageBots = () => {
     const appDispatch = useAppDispatch()
 
     const { addMessengerBot, getListOfBots, removeMessengerBot } = usePartnerConfig()
+    const { accountReadContract } = useSmartContract()
 
     async function fetchBots() {
         setLoading(true)
-        const res = await getListOfBots()
-        setLoading(false)
-        setBots(res)
+        try {
+            const res = await getListOfBots()
+            setBots(res || [])
+        } catch (error) {
+            console.error('Error fetching bots:', error)
+        } finally {
+            setLoading(false)
+        }
     }
+    // Refetch once the CMAccount contract is initialized — on first mount the
+    // provider/contract aren't ready yet and the initial fetch returns nothing.
     useEffect(() => {
         fetchBots()
-    }, [])
+    }, [accountReadContract])
     const handleAddBot = () => {
         if (isValidAddress) {
             setLoading(true)
-            addMessengerBot(address).then(async () => {
-                setAddress('')
-                await fetchBots()
-                appDispatch(
-                    updateNotificationStatus({
-                        message: 'Bot added successfully',
-                        severity: 'success',
-                    }),
-                )
-            })
+            addMessengerBot(address)
+                .then(async () => {
+                    setAddress('')
+                    setIsValidAddress(false)
+                    await fetchBots()
+                    appDispatch(
+                        updateNotificationStatus({
+                            message: 'Bot added successfully',
+                            severity: 'success',
+                        }),
+                    )
+                })
+                .catch(error => {
+                    console.error(error)
+                    setLoading(false)
+                    appDispatch(
+                        updateNotificationStatus({
+                            message: 'Failed to add bot. Please try again.',
+                            severity: 'error',
+                        }),
+                    )
+                })
         }
     }
     const handleRemoveBot = address => {
         setLoading(true)
-        removeMessengerBot(address).then(async () => {
-            await fetchBots()
-            appDispatch(
-                updateNotificationStatus({
-                    message: 'Bot removed successfully',
-                    severity: 'success',
-                }),
-            )
-        })
+        removeMessengerBot(address)
+            .then(async () => {
+                await fetchBots()
+                appDispatch(
+                    updateNotificationStatus({
+                        message: 'Bot removed successfully',
+                        severity: 'success',
+                    }),
+                )
+            })
+            .catch(error => {
+                console.error(error)
+                setLoading(false)
+                appDispatch(
+                    updateNotificationStatus({
+                        message: 'Failed to remove bot. Please try again.',
+                        severity: 'error',
+                    }),
+                )
+            })
     }
     return (
         <Box
@@ -349,12 +381,12 @@ const ManageBots = () => {
                         </Button>
                     </Box>
                     {address !== '' && !isValidAddress && (
-                        <Alert variant="negative" content="Invalid C-Chain address" />
+                        <Alert variant="negative" content="Invalid EVM address" />
                     )}
                 </Box>
             </Configuration>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <Configuration.Infos information="Check with your IT departments for the C-Chain address of each bot, and keep the list updated in case of changes."></Configuration.Infos>
+                <Configuration.Infos information="Check with your IT departments for the EVM address of each bot, and keep the list updated in case of changes. Adding a bot grants it the Messenger Bot, Booking Operator and Gas Withdrawer roles on your Messenger Account."></Configuration.Infos>
             </Box>
         </Box>
     )

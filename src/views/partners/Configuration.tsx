@@ -404,7 +404,6 @@ Configuration.Services = function Services({
     disabled?: boolean
 }) {
     let { partnerID } = useParams()
-    const { sftSymbol } = usePartnerConfig()
     const removeService = serviceIndex => {
         dispatch({
             type: actionTypes.REMOVE_SERVICE,
@@ -437,20 +436,6 @@ Configuration.Services = function Services({
         })
     }
 
-    const handleFeeChange = (event, serviceIndex) => {
-        const newAmount = event.target.value
-        if (newAmount === '' || /^\d*\.?\d*$/.test(newAmount)) {
-            dispatch({
-                type: actionTypes.UPDATE_FEE,
-                payload: {
-                    step: state.step,
-                    serviceIndex: serviceIndex,
-                    newValue: newAmount,
-                },
-            })
-        }
-    }
-
     return (
         <Box sx={{ display: 'flex', gap: '16px', flexDirection: 'column' }}>
             {state.stepsConfig[state.step].services.map((service, index) => (
@@ -480,6 +465,8 @@ Configuration.Services = function Services({
                     </Box>
                     {state.step === 1 && (
                         <>
+                            {/* TTM contracts have no per-service fee (fee removal) — only
+                                rack rates + capabilities remain configurable. */}
                             <Box
                                 sx={{
                                     display: 'flex',
@@ -489,53 +476,9 @@ Configuration.Services = function Services({
                                 }}
                             >
                                 <Typography sx={{ flex: '0 0 20%' }} variant="overline">
-                                    FEE
+                                    Rates
                                 </Typography>
                                 <Box sx={{ display: 'flex', gap: '8px', flex: '1' }}>
-                                    <OutlinedInput
-                                        disabled={disabled}
-                                        value={state.stepsConfig[state.step].services[index].fee}
-                                        onChange={e => handleFeeChange(e, index)}
-                                        inputProps={{
-                                            inputMode: 'decimal',
-                                            pattern: '[0-9]*',
-                                        }}
-                                        endAdornment={
-                                            <InputAdornment position="end">
-                                                <Box
-                                                    sx={{
-                                                        borderLeft: '1px solid',
-                                                        borderColor: theme =>
-                                                            theme.palette.card.border,
-                                                        height: '100%',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        paddingLeft: '16px',
-                                                        paddingRight: '16px',
-                                                        color: theme => theme.palette.text.primary,
-                                                    }}
-                                                >
-                                                    {sftSymbol}
-                                                </Box>
-                                            </InputAdornment>
-                                        }
-                                        sx={theme => ({
-                                            flex: '1',
-                                            height: '40px',
-                                            border: `solid 1px ${theme.palette.card.border}`,
-                                            fontSize: '14px',
-                                            lineHeight: '24px',
-                                            fontWeight: 500,
-                                            paddingRight: '0px',
-                                            '.MuiOutlinedInput-notchedOutline': {
-                                                border: 'none',
-                                            },
-                                            '& .MuiInputAdornment-root': {
-                                                height: '100%',
-                                                maxHeight: 'none',
-                                            },
-                                        })}
-                                    />
                                     {(state.stepsConfig[state.step].services[index].rackRates ||
                                         !partnerID) && (
                                         <FormControlLabel

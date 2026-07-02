@@ -27,7 +27,7 @@ const initialState = {
             title: 'Supplier configuration',
             type: 'supplier',
             paragraph:
-                'Configure services, set fees, and add specific details. Customize your setup by selecting or removing services below.',
+                'Configure services and add specific details. Customize your setup by selecting or removing services below.',
             isSupplier: false,
             services: [],
         },
@@ -118,12 +118,14 @@ export function reducer(state = initialState, action) {
                         ),
                     }
                 if (!services || services.length < 1) return state
+                // TTM CMAccount tuple is (bool restrictedRate, string[] capabilities) —
+                // the legacy c4t shape had a leading fee that no longer exists on-chain.
                 let parsedServices = services[0].map((service, index) => {
-                    let capabilities = services[1][index][2].map(elem => elem)
+                    let capabilities = services[1][index][1].map(elem => elem)
                     return {
                         name: service,
-                        fee: ethers.formatEther(services[1][index][0]),
-                        rackRates: services[1][index][1],
+                        fee: '0',
+                        rackRates: services[1][index][0],
                         capabilities: capabilities,
                     }
                 })
@@ -142,7 +144,7 @@ export function reducer(state = initialState, action) {
             } catch (e) {
                 console.log(e)
             }
-            return
+            return state
         }
 
         case actionTypes.UPDATE_WANTED_SERVICES: {
