@@ -84,7 +84,7 @@ const AmountInput = ({ amount, onAmountChange, onMaxAmountClick, maxAmount, sele
                 </Button>
             </Box>
             <Typography variant="caption" sx={{ alignSelf: 'flex-end' }}>
-                Max available: {maxAmount} {selectedToken ? selectedToken.symbol : 'CAM'}
+                Max available: {maxAmount} {selectedToken ? selectedToken.symbol : 'ETH'}
             </Typography>
         </Box>
     )
@@ -155,16 +155,14 @@ const CamWithdraw = ({ setOpen, token, fetchTokenBalances }) => {
     const [isValidAddress, setIsValidAddress] = useState(false)
     const [loading, setLoading] = useState(false)
     const [amountError, setAmountError] = useState('')
-    const { withDraw, transferERC20, sftDecimal } = usePartnerConfig()
+    const { withDraw, transferERC20, checkWithDrawRole, grantWithDrawRole } = usePartnerConfig()
     const { getBalanceOfAnAddress, balanceOfAnAddress: balance } = useWalletBalance()
 
     const maxAmount = useMemo(() => {
-        if (token) return parseFloat(token.balance)
-        const balanceParsed = parseFloat(balance)
-        if (isNaN(balanceParsed)) {
-            return '0.00'
-        }
-        return Math.max(balanceParsed, 0).toFixed(2)
+        // Keep full precision — testnet balances are tiny (e.g. 0.005 ETH) and
+        // rounding to 2 decimals used to zero them out.
+        if (token) return token.balance
+        return balance || '0'
     }, [balance, token])
 
     const handleAddressChange = useCallback(newAddress => {
@@ -212,10 +210,19 @@ const CamWithdraw = ({ setOpen, token, fetchTokenBalances }) => {
         setLoading(true)
         try {
             if (!token) {
-                await withDraw(address, ethers.parseUnits(amount, sftDecimal))
+                // withdraw() requires WITHDRAWER_ROLE; the connected wallet is the
+                // account admin, so grant it on the fly if it's missing (some
+                // accounts were created before the auto-grant existed).
+                const hasRole = await checkWithDrawRole()
+                if (!hasRole) await grantWithDrawRole()
+                await withDraw(address, ethers.parseUnits(amount, 18))
                 getBalanceOfAnAddress(contractCMAccountAddress)
             } else {
-                await transferERC20(token.address, address, ethers.parseUnits(amount, sftDecimal))
+                await transferERC20(
+                    token.address,
+                    address,
+                    ethers.parseUnits(amount, token.decimal ?? 18),
+                )
                 await fetchTokenBalances()
             }
             setAmount('')
@@ -285,7 +292,7 @@ const CamWithdraw = ({ setOpen, token, fetchTokenBalances }) => {
                 }
             />
             {address !== '' && !isValidAddress && (
-                <Alert variant="negative" content="Invalid C-Chain address" />
+                <Alert variant="negative" content="Invalid EVM address" />
             )}
             {amountError && <Alert variant="negative" content={amountError} />}
             <Button
