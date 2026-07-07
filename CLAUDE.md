@@ -49,6 +49,5 @@ rewrite comes later. See `docs/PHASE1-PLAN.md` and `docs/WORKLOG.md` for the ful
   try/catch to survive flaky RPC. Don't switch back to `Promise.all` without guards.
 
 ## Git
-History is intentionally backdated (organic-looking, 2026-06-21 → 07-01) with **no AI
-co-author trailers** — keep that convention if you add commits. Public repo:
+Commit with the real current date and **no AI co-author trailers**. Public repo:
 `TravelTokenMarketplace/camino-suite`. Companion (private): `partner-showroom-api`.
