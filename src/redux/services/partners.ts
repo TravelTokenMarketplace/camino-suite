@@ -228,7 +228,9 @@ export const getPartnersWithServices = async (response: PartnersResponseType) =>
     const selectedNetwork = store.getters['Network/selectedNetwork']
     const networkName = selectedNetwork.name.toLowerCase()
 
-    if (networkName !== 'columbus' && networkName !== 'camino') {
+    // Enrich on any network with deployed Messenger contracts (legacy gate was
+    // columbus/camino only, which skipped enrichment entirely on Base Sepolia).
+    if (networkName !== 'columbus' && networkName !== 'camino' && networkName !== 'base-sepolia') {
         return response
     }
 
