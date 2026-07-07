@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><link rel="manifest" href="/manifest.json"/><link rel="icon" href="/favicon.ico"/><meta name="viewport" content="width=device-width,initial-scale=1"/><meta name="theme-color" content="#000000"/><meta name="description" content="Discover Camino Suite — hub for crypto wallets, on-chain data, transactions, Camino Messenger configuration, and Partner Showroom of Camino Network."/><meta name="keywords" content="Camino Suite"/><title>Camino Suite</title><meta property="og:image" content="/preview.png"/><meta property="og:title" content="Camino Suite: wallet, data, partners showroom"/><meta property="og:description" content="Discover Camino Suite — hub for crypto wallets, on-chain data, transactions, Camino Messenger configuration, and Partner Showroom of Camino Network."/><meta property="og:url" content="https://suite.camino.network/"/><meta property="og:type" content="website"/><meta name="twitter:card" content="summary"/><meta name="twitter:site" content="@chain4travel"/><meta name="twitter:creator" content="@chain4travel"/><meta name="twitter:title" content="Camino Suite"/><meta name="twitter:description" content="Camino Suite for everything Camino by Chain4Travel."/><meta name="twitter:image" content="/preview.png"/><meta name="twitter:image:alt" content="Camino Suite"/><link rel="preconnect" href="https://cdn.jsdelivr.net"/><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.0.96/css/materialdesignicons.min.css"/><link rel="stylesheet" href="/fonts/index.css"/><link rel="stylesheet" href="/index.css"/><link rel="icon" href="/camino-suite/favicon.ico"><script defer="defer" src="/camino-suite/js/main.8fd5ea80.js"></script></head><body><noscript><strong>We're sorry but application suite doesn't work properly without JavaScript enabled. Please enable it to continue.</strong></noscript><div id="app_loading" style="display: flex;
+                justify-content: center;
+                align-items: center;
+                min-width: 100vw;
+                min-height: 100vh;"><img rel="preload" src="/gif/loading_0.gif"/></div><div id="app"></div></body><style>html[data-theme='light'] {
+            --bg: #f1f5f9;
+        }
+        html[data-theme='dark'] {
+            --bg: #020617;
+        }
+        body {
+            background-color: var(--bg);
+            overflow: initial;
+        }
+        #app_loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg);
+            z-index: 9999;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            min-width: 100vw;
+            min-height: 100vh;
+        }
+        #app_loading img {
+            width: 10vw;
+            max-width: 300px;
+            min-width: 200px;
+        }</style><script prefetch="true" src="https://www.termsfeed.com/public/cookie-consent/4.1.0/cookie-consent.js" charset="UTF-8"></script><script>document.addEventListener('DOMContentLoaded', function () {
+            cookieconsent.run({
+                notice_banner_type: 'simple',
+                consent_type: 'express',
+                palette: 'dark',
+                language: 'en',
+                page_load_consent_levels: ['strictly-necessary'],
+                notice_banner_reject_button_hide: false,
+                preferences_center_close_button_hide: false,
+                page_refresh_confirmation_buttons: false,
+                website_name: 'Camino Suite',
+            })
+        })</script><noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/privacy-policy-generator/">TermsFeed Free Privacy Policy Generator</a></noscript><script>// set data-theme based on localStorage
+        const theme = localStorage.getItem('theme')
+
+        if (theme) document.documentElement.setAttribute('data-theme', theme)
+        else document.documentElement.setAttribute('data-theme', 'light')
+
+        let intervalId
+
+        function checkAppLoading() {
+            const app = document.getElementById('app')
+            const appLoading = document.getElementById('app_loading')
+            const gdprBanner = document.getElementById('termsfeed-com---nb')
+            if (app.childElementCount === 0) {
+                appLoading.style.display = 'flex'
+                if (gdprBanner) gdprBanner.style.visibility = 'hidden'
+            } else {
+                appLoading.style.display = 'none'
+                if (gdprBanner) gdprBanner.style.visibility = 'visible'
+                clearInterval(intervalId)
+            }
+        }
+
+        intervalId = setInterval(checkAppLoading, 1000)</script></html>
