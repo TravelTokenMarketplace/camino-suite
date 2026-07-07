@@ -291,6 +291,11 @@ export const Balances = () => {
     }
 
     const displayedTokens = isEditMode ? tempSupportedTokens : tokens
+    // While the first token read is in flight, hide the whole accepted-currencies list
+    // (off-chain + ETH + tokens) behind one spinner, so it never shows a partial list
+    // (e.g. just ETH + off-chain) that looks final and then reflows when the slow
+    // sequential public-RPC reads resolve. Not applied in edit mode (no fetch there).
+    const currenciesLoading = isFetching && !isEditMode
 
     return (
         <Box
@@ -339,6 +344,23 @@ export const Balances = () => {
                             />
                         )}
                     </Box>
+                    {currenciesLoading ? (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                py: '24px',
+                            }}
+                        >
+                            <CircularProgress size={20} />
+                            <Typography variant="body2" color="text.secondary">
+                                Loading accepted currencies…
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <>
                     <FormControlLabel
                         disabled={!isEditMode}
                         label={<Typography variant="body2">Fiat: off-chain</Typography>}
@@ -391,7 +413,10 @@ export const Balances = () => {
                             </Button>
                         )}
                     </Box>
-                    {displayedTokens.length > 0 &&
+                        </>
+                    )}
+                    {!currenciesLoading &&
+                        displayedTokens.length > 0 &&
                         displayedTokens.map((elem, index) => {
                             return (
                                 <Box
