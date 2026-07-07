@@ -77,8 +77,8 @@ const Footer: React.FC = () => {
                                     <img
                                         src={
                                             theme.palette.mode === 'light'
-                                                ? '/assets/LightModeLogo.svg'
-                                                : '/assets/DarkModeLogo.svg'
+                                                ? `${process.env.PUBLIC_PATH || '/'}assets/LightModeLogo.svg`
+                                                : `${process.env.PUBLIC_PATH || '/'}assets/DarkModeLogo.svg`
                                         }
                                         style={{ height: '100%', width: '100%' }}
                                         alt="camino logo"

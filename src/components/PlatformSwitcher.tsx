@@ -81,10 +81,10 @@ export default function PlatformSwitcher() {
                         <img
                             src={
                                 !isDesktop
-                                    ? '/assets/CaminoLogo.svg'
+                                    ? `${process.env.PUBLIC_PATH || '/'}assets/CaminoLogo.svg`
                                     : themeMode
-                                    ? '/assets/LightModeLogo.svg'
-                                    : '/assets/DarkModeLogo.svg'
+                                    ? `${process.env.PUBLIC_PATH || '/'}assets/LightModeLogo.svg`
+                                    : `${process.env.PUBLIC_PATH || '/'}assets/DarkModeLogo.svg`
                             }
                             alt="Camino Logo"
                             style={
