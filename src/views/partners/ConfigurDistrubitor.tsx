@@ -39,6 +39,7 @@ function ServiceChangesPreview({ added, removed }) {
     const { contractCMAccountAddress, provider, accountWriteContract } = useSmartContract()
 
     async function fetchChangesAndEstimateCosts() {
+        if (!provider || !accountWriteContract) return
         const gasPrice = (await provider.getFeeData()).gasPrice
         let total = 0n
 
@@ -102,7 +103,7 @@ function ServiceChangesPreview({ added, removed }) {
                                     <Typography variant="caption">Services</Typography>
                                 </TableCell>
                                 <TableCell align="right">
-                                    <Typography variant="caption">Estimated Cost (CAM)</Typography>
+                                    <Typography variant="caption">Estimated Cost (ETH)</Typography>
                                 </TableCell>
                             </TableRow>
                         </TableHead>
@@ -140,7 +141,7 @@ function ServiceChangesPreview({ added, removed }) {
                 )}
 
                 <Typography variant="body2">
-                    Total Estimated Cost: {formatEther(totalCost)} CAM
+                    Total Estimated Cost: {formatEther(totalCost)} ETH
                 </Typography>
             </CardContent>
         </Card>
@@ -265,23 +266,35 @@ const ConfigurDistrubitor = () => {
     const appDispatch = useAppDispatch()
     async function confirmEditing() {
         setLoading(true)
-        await removeWantedServices(removed.map(elem => elem.name))
-        await addWantedServices(added.map(elem => elem.name))
-        let res = await getWantedServices()
-        dispatch({
-            type: actionTypes.UPDATE_WANTED_SERVICES,
-            payload: { wantedServices: res },
-        })
-        appDispatch(
-            updateNotificationStatus({
-                message: 'Services configured successfully',
-                severity: 'success',
-            }),
-        )
-        setAdded([])
-        setRemoved([])
-        setLoading(false)
-        setEditing(false)
+        try {
+            // Only send transactions for non-empty change sets.
+            if (removed.length > 0) await removeWantedServices(removed.map(elem => elem.name))
+            if (added.length > 0) await addWantedServices(added.map(elem => elem.name))
+            let res = await getWantedServices()
+            dispatch({
+                type: actionTypes.UPDATE_WANTED_SERVICES,
+                payload: { wantedServices: res },
+            })
+            appDispatch(
+                updateNotificationStatus({
+                    message: 'Services configured successfully',
+                    severity: 'success',
+                }),
+            )
+            setAdded([])
+            setRemoved([])
+            setEditing(false)
+        } catch (error) {
+            console.error(error)
+            appDispatch(
+                updateNotificationStatus({
+                    message: 'Failed to configure services. Please try again.',
+                    severity: 'error',
+                }),
+            )
+        } finally {
+            setLoading(false)
+        }
     }
 
     function cancelEditing() {

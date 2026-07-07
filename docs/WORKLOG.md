@@ -116,8 +116,8 @@ kept for undo/redo. Newest entries at the bottom. See `docs/PHASE1-PLAN.md` for 
   Account" address flipped between accounts. Now sequential, picks the first match, breaks.
 - **CI + docs:** removed legacy suite workflows (AWS/ECR/cypress); rewrote `README.md`; added
   `CLAUDE.md` to both repos.
-- **On-chain verification:** wallet `0x5d30…f890` created CMAccounts `0x40C6…D8f3` and
-  `0x25183D…e319`, each deployed + prefunded with 0.005 ETH (count 12 → 14). Full write path proven.
+- **On-chain verification:** a dev test wallet created two CMAccounts, each deployed +
+  prefunded with 0.005 ETH (count 12 → 14). Full write path proven.
 
 ## Session persistence + config-page polish (browser-driven, hands-off)
 - **Wallet session now survives reload.** `useMetaMask` calls `eth_accounts` on mount and
@@ -130,29 +130,63 @@ kept for undo/redo. Newest entries at the bottom. See `docs/PHASE1-PLAN.md` for 
 - **MyMessenger labels for Base:** "Blockchain Transaction Fee Currency" CAM → **ETH**;
   "Messenger Fee Currency" stuck "Loading…" → **"Not configured on Base Sepolia"** (no
   manager-level service-fee token on TTM).
-- Verified in a real Chrome (connected as `0x5d30…f890`): reload keeps the session, lands on
-  My Messenger Account showing the stable CMAccount `0x40C6…D8f3`, ETH fee label, all tabs
+- Verified in a real Chrome (connected as a dev test wallet): reload keeps the session, lands on
+  My Messenger Account showing a stable CMAccount, ETH fee label, all tabs
   present. Offered/Wanted/Bots correctly "None" (nothing added yet). Only console line is a
   benign, handled `estimateGas` fallback warning.
 
-## NEXT SESSION — config tabs not yet working (verify + fix)
-The Showroom, connect (persistent), and CMAccount create/prefund are done. These config
-sub-tabs still need work (currently non-functional / unverified on Base Sepolia):
-- **Balances tab** — handle **EURe** (and other ERC-20 payment token) balances: read the
-  CMAccount's supported tokens + balances, top-up/withdraw. Currently the accepted-currency /
-  balance display is legacy CAM-centric.
-- **Offered Services** — list current offered services and **add / remove** them
-  (`addService(name, restrictedRate, capabilities)` / `removeService`, `setServiceRestrictedRate`,
-  `setServiceCapabilities`). Not working.
-- **Wanted Services** — list + **add / remove** (`addWantedServices` / `removeWantedServices`).
-  Not working.
-- **Manage Bots** — list + **add / remove** bots (`addMessengerBot` / `removeMessengerBot`,
-  `MESSENGER_BOT_ROLE`). Not working.
-Approach: same as create — drive hands-off in a real Chrome (wallet stays connected),
-reconcile each read/write against the TTM CMAccount ABI + the reference
-`../camino-messenger-contracts/ui` tabs (Services/PaymentTokens/Bots), verify each write lands
-on-chain. Watch for the same gotchas: ABI drift, ETH-not-CAM labels, public-RPC batching, and
-guarded error handling.
+## Config tabs — reconciled with TTM ABI + verified on-chain (browser-driven)
+All four config sub-tabs now work against the live Base Sepolia contracts. Root causes were
+all ABI drift from TTM's "fee removal" refactor (confirmed by Ekrem on Discord: contracts
+"changed a lot with the fee removal stuff"):
+- **Service tuple parse fixed** — TTM `getSupportedServices()` returns
+  `(names[], (restrictedRate, capabilities)[])`; the legacy parser read `[0]` as a fee →
+  threw → the context reducer **returned `undefined` and nuked the whole config state**.
+  Fixed in `partnerConfigurationContext` + the showroom enrichment (`redux/services/partners.ts`).
+- **Offered Services** — `addService(name, restrictedRate, caps)` (3-arg, no fee);
+  removed `setServiceFee` everywhere (doesn't exist on TTM); removed the FEE input row from
+  `Configuration.Services`; gas-preview estimates fixed; CAM→ETH labels; error toasts +
+  try/finally so a rejected tx doesn't wedge the Save button.
+- **Wanted Services** — worked once the reducer stopped self-destructing; added empty-changeset
+  guards (no pointless txs) + error handling.
+- **Manage Bots** — `getListOfBots` now a single `getRoleMembers(MESSENGER_BOT_ROLE)` call;
+  refetch when `accountReadContract` initializes (was a mount-only fetch against a null
+  contract → forever-empty list); add/remove with success/error toasts; EVM-address copy.
+- **Balances rewritten for Base** — legacy sft/`networkErc20Tokens` deps never resolved on Base
+  (tab was dead). Now: native ETH row (CMAccount balance, accepted = ZeroAddress supported
+  token, withdraw), curated ERC-20s **EURe `0x29F37F6a…db85` (Monerium sandbox), USDC, EURC,
+  WETH** + any on-chain supported token + custom address input — metadata/balances read live,
+  sequential (public-RPC), per-item guarded. Off-chain fiat toggle. **`+ MetaMask` button per
+  token (`wallet_watchAsset`)** — works around MetaMask's broken manual token import on custom
+  networks (Ekrem's blockscout workaround, natively).
+- **Withdraw fixed** — `CamWithdraw` uses per-token decimals (was `sftDecimal` for everything),
+  full-precision max (was `.toFixed(2)` → zeroed testnet balances), auto-grants
+  `WITHDRAWER_ROLE` when missing (an early test CMAccount was created before the auto-grant existed);
+  `withDraw`/`transferERC20` now rethrow (used to swallow errors → fake success toasts).
+
+**On-chain verification (a dev test CMAccount):** added
+`cmp.services.ping.v2.PingService` (restrictedRate + capability) ✓; wanted
+`cmp.services.accommodation.v5.AccommodationSearchService` ✓; bot `0x1111…1111` added then
+removed ✓; supported tokens = native ETH + EURe, `offChainPaymentSupported=true` ✓;
+withdrew 0.001 ETH to the wallet with on-the-fly WITHDRAWER grant (balance 0.005→0.004) ✓.
+Manager registry has **64 registered service names** feeding the autocomplete.
+
+EURe note: Monerium sandbox (`sandbox.monerium.dev`) issues test EURe on Base Sepolia via
+fake SEPA transfer; the dev test wallet holds 1000 EURe.
+
+## Showroom ↔ on-chain linkage (partner detail right column)
+- `getPartnersWithServices` was gated to `columbus|camino` → on base-sepolia the showroom
+  never enriched partners with contract data. Gate now includes `base-sepolia`
+  (validator lookup stays camino-only via the stubbed caminoClient shim → `isValidator:false`).
+- Created CMS demo partner **"Transio"** (id 261) in the dummy API with a `base-sepolia`
+  `cChainAddresses` entry — the enrichment maps creator wallet → its CMAccount. Detail page
+  shows the live **Camino Messenger** widget: Offered (Ping), Wanted (AccommodationSearch),
+  Supported Currencies (ETH / Fiat (off-chain) / EURe), CMAccount address, ON MESSENGER
+  badge, Configure button.
+- Gotcha (dummy API): create/update partners with `business_fields: [ids]` (plain id array) —
+  posting the raw `{data:[{id}]}` envelope stores the relation without `attributes` and the
+  showroom's `groupedBusinessFields` crashes on it.
+- Widget/labels: native currency `CAM` → `ETH`, `OffChainPaymentSupported` → `Fiat (off-chain)`.
 
 ## Status: Phase 1 core complete
 Showroom (244 partners) + connect MetaMask + self-service Messenger config + **on-chain CMAccount

@@ -167,7 +167,7 @@ const Widget = ({
             ),
         ].join(', ')
         let otherPartnerAccept = []
-        if (partner.supportedCurrencies && supportedCurrencies.isCam) otherPartnerAccept.push('CAM')
+        if (partner.supportedCurrencies && supportedCurrencies.isCam) otherPartnerAccept.push('ETH')
         if (partner.supportedCurrencies && supportedCurrencies.offChainPaymentSupported)
             otherPartnerAccept.push('offChainPaymentSupported')
         if (
@@ -180,7 +180,7 @@ const Widget = ({
                 [...supportedCurrencies.tokens.filter(elem => elem.symbol)],
             ]
         let myPartnerAccept = []
-        if (data.supportedCurrencies && data.supportedCurrencies.isCam) myPartnerAccept.push('CAM')
+        if (data.supportedCurrencies && data.supportedCurrencies.isCam) myPartnerAccept.push('ETH')
         if (data.supportedCurrencies && data.supportedCurrencies.offChainPaymentSupported)
             myPartnerAccept.push('offChainPaymentSupported')
         if (
@@ -297,14 +297,14 @@ const Widget = ({
                         {supportedCurrencies?.isCam && (
                             <li className="service-type-item">
                                 <Typography fontSize={14} fontWeight={600} lineHeight={'20px'}>
-                                    CAM
+                                    ETH
                                 </Typography>
                             </li>
                         )}
                         {supportedCurrencies?.offChainPaymentSupported && (
                             <li className="service-type-item">
                                 <Typography fontSize={14} fontWeight={600} lineHeight={'20px'}>
-                                    OffChainPaymentSupported
+                                    Fiat (off-chain)
                                 </Typography>
                             </li>
                         )}

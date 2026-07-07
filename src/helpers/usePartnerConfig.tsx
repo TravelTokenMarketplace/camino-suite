@@ -193,23 +193,18 @@ export const usePartnerConfig = () => {
     const getListOfBots = useCallback(async () => {
         try {
             const MESSENGER_BOT_ROLE = await readFromContract('account', 'MESSENGER_BOT_ROLE')
-            const roleMemberCount = await readFromContract(
+            if (!MESSENGER_BOT_ROLE) return []
+            // TTM exposes getRoleMembers — one RPC call instead of count + N getRoleMember.
+            const bots = await readFromContract(
                 'account',
-                'getRoleMemberCount',
+                'getRoleMembers',
                 MESSENGER_BOT_ROLE,
             )
-
-            const botPromises = []
-            for (let i = 0; i < roleMemberCount; i++) {
-                botPromises.push(accountReadContract.getRoleMember(MESSENGER_BOT_ROLE, i))
-            }
-
-            const bots = await Promise.all(botPromises)
-            return bots
+            return bots ? [...bots] : []
         } catch (error) {
             throw error
         }
-    }, [account, managerReadContract])
+    }, [account, accountReadContract])
 
     const isCMAccount = useCallback(async () => {
         try {
@@ -282,10 +277,10 @@ export const usePartnerConfig = () => {
                 return
             }
             try {
+                // TTM signature: addService(name, restrictedRate, capabilities) — no fee.
                 for (const service of services) {
                     const tx = await accountWriteContract.addService(
                         service.name,
-                        ethers.parseEther(service.fee ? service.fee : '0'),
                         service.rackRates,
                         service.capabilities.filter(item => item !== ''),
                     )
@@ -316,24 +311,6 @@ export const usePartnerConfig = () => {
         },
         [account, writeToContract],
     )
-    const setServiceFee = useCallback(
-        async (service, fee) => {
-            if (!account) {
-                console.error('Account is not initialized')
-                return
-            }
-            try {
-                const tx = await accountWriteContract.setServiceFee(service, fee)
-                const receipt = await tx.wait()
-                return receipt
-            } catch (error) {
-                console.error(error)
-                throw error
-            }
-        },
-        [account, writeToContract],
-    )
-
     const setServiceRestrictedRate = useCallback(
         async (service, restrictedRate) => {
             if (!account) {
@@ -500,6 +477,7 @@ export const usePartnerConfig = () => {
             const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
             console.error('Message:', error.message)
             console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
+            throw error
         }
     }, [account, accountWriteContract, readFromContract])
 
@@ -517,6 +495,7 @@ export const usePartnerConfig = () => {
                 const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
                 console.error('Message:', error.message)
                 console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
+                throw error
             }
         },
         [account, accountWriteContract],
@@ -529,16 +508,6 @@ export const usePartnerConfig = () => {
                 return
             }
             try {
-                const abi = [
-                    {
-                        constant: true,
-                        inputs: [{ name: '_owner', type: 'address' }],
-                        name: 'balanceOf',
-                        outputs: [{ name: 'balance', type: 'uint256' }],
-                        type: 'function',
-                    },
-                ]
-
                 const tx = await accountWriteContract.transferERC20(
                     tokenAddress,
                     ethers.getAddress(to),
@@ -549,6 +518,7 @@ export const usePartnerConfig = () => {
                 const decodedError = accountWriteContract.interface.parseError(error?.data || "0x")
                 console.error('Message:', error.message)
                 console.error(`Reason: ${decodedError?.name} (${decodedError?.args})`)
+                throw error
             }
         },
         [account, accountWriteContract],
@@ -658,7 +628,6 @@ export const usePartnerConfig = () => {
         checkWithDrawRole,
         grantWithDrawRole,
         withDraw,
-        setServiceFee,
         setServiceRestrictedRate,
         setServiceCapabilities,
         addSupportedToken,

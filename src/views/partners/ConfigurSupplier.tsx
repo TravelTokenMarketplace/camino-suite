@@ -38,6 +38,7 @@ function ServiceChangesPreview({ added, updated, removed }) {
     const [totalCost, setTotalCost] = useState(0n)
 
     async function fetchChangesAndEstimateCosts() {
+        if (!provider || !accountWriteContract) return
         const gasPrice = (await provider.getFeeData()).gasPrice
         let total = 0n
         if (added.length > 0) {
@@ -46,7 +47,6 @@ function ServiceChangesPreview({ added, updated, removed }) {
                     const gasEst = BigInt(
                         await accountWriteContract.addService.estimateGas(
                             service.name,
-                            ethers.parseEther(service.fee ? service.fee : '0'),
                             service.rackRates,
                             service.capabilities?.filter(item => item !== ''),
                         ),
@@ -65,25 +65,6 @@ function ServiceChangesPreview({ added, updated, removed }) {
                 updated.map(async updateItem => {
                     let totalGasEst = 0n
                     let changeDetails = []
-
-                    if (updateItem.changes.includes('fee')) {
-                        const feeGasEst = BigInt(
-                            await accountWriteContract.setServiceFee.estimateGas(
-                                updateItem.updated.name,
-                                ethers.parseEther(
-                                    updateItem.updated.fee ? updateItem.updated.fee : '0',
-                                ),
-                            ),
-                        )
-                        totalGasEst += feeGasEst
-                        changeDetails.push({
-                            type: 'fee',
-                            gasEst: feeGasEst,
-                            cost: feeGasEst * gasPrice,
-                            oldValue: updateItem.original.fee,
-                            newValue: updateItem.updated.fee,
-                        })
-                    }
 
                     if (updateItem.changes.includes('rackRates')) {
                         const rackRateGasEst = BigInt(
@@ -179,12 +160,12 @@ function ServiceChangesPreview({ added, updated, removed }) {
                                 )}
                                 {isUpdate && (
                                     <TableCell align="right">
-                                        <Typography variant="caption">Change Cost (CAM)</Typography>
+                                        <Typography variant="caption">Change Cost (ETH)</Typography>
                                     </TableCell>
                                 )}
                                 <TableCell align="right">
                                     <Typography variant="caption">
-                                        Total Estimated Cost (CAM)
+                                        Total Estimated Cost (ETH)
                                     </Typography>
                                 </TableCell>
                             </TableRow>
@@ -273,7 +254,7 @@ function ServiceChangesPreview({ added, updated, removed }) {
                 )}
 
                 <Typography variant="body2">
-                    Total Estimated Cost: {formatEther(totalCost)} CAM
+                    Total Estimated Cost: {formatEther(totalCost)} ETH
                 </Typography>
             </CardContent>
         </Card>
@@ -283,7 +264,6 @@ function ServiceChangesPreview({ added, updated, removed }) {
 const isEqual = (a, b) => {
     return (
         a.name === b.name &&
-        ethers.parseEther(a.fee || '0') === ethers.parseEther(b.fee || '0') &&
         a.rackRates === b.rackRates &&
         JSON.stringify(a.capabilities.filter(item => item !== '')) ===
             JSON.stringify(b.capabilities.filter(item => item !== ''))
@@ -356,7 +336,6 @@ const ConfigurSupplier = () => {
         addServices,
         getSupportedServices,
         setServiceCapabilities,
-        setServiceFee,
         setServiceRestrictedRate,
     } = usePartnerConfig()
 
@@ -380,8 +359,6 @@ const ConfigurSupplier = () => {
                     changes: [],
                 })
 
-                if (origItem.fee !== updatedItem.fee)
-                    updated[updated.length - 1].changes.push('fee')
                 if (origItem.rackRates !== updatedItem.rackRates)
                     updated[updated.length - 1].changes.push('rackRates')
                 if (
@@ -414,12 +391,8 @@ const ConfigurSupplier = () => {
     }, [compareServices])
 
     const updateService = async service => {
-        const { name, fee, rackRates, capabilities } = service.updated
+        const { name, rackRates, capabilities } = service.updated
         const changes = service.changes
-
-        if (changes.includes('fee')) {
-            await setServiceFee(name, ethers.parseEther(fee || '0'))
-        }
 
         if (changes.includes('rackRates')) {
             await setServiceRestrictedRate(name, rackRates)
@@ -450,31 +423,42 @@ const ConfigurSupplier = () => {
 
     async function confirmEditing() {
         setLoading(true)
-        if (removed.length > 0) await removeServices(removed)
-        if (added.length > 0) await addServices(added)
-        for (const service of updated) {
-            await updateService(service)
+        try {
+            if (removed.length > 0) await removeServices(removed)
+            if (added.length > 0) await addServices(added)
+            for (const service of updated) {
+                await updateService(service)
+            }
+            let res = await getSupportedServices()
+            dispatch({
+                type: actionTypes.UPDATE_SUPPORTED_SERVICES,
+                payload: { services: res },
+            })
+            dispatchSupplierState({
+                type: actionTypes.RESET_STATE,
+                payload: { initialState: { ...state, step: 1 } },
+            })
+            appDispatch(
+                updateNotificationStatus({
+                    message: 'Services configured successfully',
+                    severity: 'success',
+                }),
+            )
+            setAdded([])
+            setRemoved([])
+            setUpdated([])
+            setEditing(false)
+        } catch (error) {
+            console.error(error)
+            appDispatch(
+                updateNotificationStatus({
+                    message: 'Failed to configure services. Please try again.',
+                    severity: 'error',
+                }),
+            )
+        } finally {
+            setLoading(false)
         }
-        let res = await getSupportedServices()
-        dispatch({
-            type: actionTypes.UPDATE_SUPPORTED_SERVICES,
-            payload: { services: res },
-        })
-        dispatchSupplierState({
-            type: actionTypes.RESET_STATE,
-            payload: { initialState: { ...state, step: 1 } },
-        })
-        appDispatch(
-            updateNotificationStatus({
-                message: 'Services configured successfully',
-                severity: 'success',
-            }),
-        )
-        setAdded([])
-        setRemoved([])
-        setUpdated([])
-        setLoading(false)
-        setEditing(false)
     }
 
     function cancelEditing() {

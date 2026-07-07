@@ -9,6 +9,7 @@ import {
     Divider,
     FormControlLabel,
     IconButton,
+    TextField,
     Tooltip,
     Typography,
 } from '@mui/material'
@@ -19,35 +20,64 @@ import { useAppDispatch } from '../../hooks/reduxHooks'
 import { mdiClose } from '@mdi/js'
 import Icon from '@mdi/react'
 import { ethers } from 'ethers'
-import store from 'wallet/store'
 import DialogAnimate from '../../components/Animate/DialogAnimate'
 import CamWithdraw from '../../components/CamWithdraw'
-import { ERC20_BALANCE_ABI } from '../../constants/apps-consts'
+import { ERC20_ABI } from '../../constants/apps-consts'
 import { usePartnerConfig } from '../../helpers/usePartnerConfig'
 import { useSmartContract } from '../../helpers/useSmartContract'
 import useWalletBalance from '../../helpers/useWalletBalance'
 import { updateNotificationStatus } from '../../redux/slices/app-config'
 import { Configuration } from './Configuration'
 
+// Preconfigured payment tokens on Base Sepolia — always shown in the tab.
+// Balances are read on-chain; the hardcoded metadata is the fallback so the
+// row still renders when the public RPC hiccups. EURe (Monerium sandbox,
+// sandbox.monerium.dev) is TTM's primary settlement currency.
+const KNOWN_TOKENS = [
+    {
+        address: '0x29F37F6adCa168B79B8d9567eab9BE3fBF21db85',
+        symbol: 'EURe',
+        name: 'Monerium EURe',
+        decimal: 18,
+    },
+    {
+        address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+        symbol: 'USDC',
+        name: 'USDC',
+        decimal: 6,
+    },
+    {
+        address: '0x808456652fdb597867f38412077A9182bf77359F',
+        symbol: 'EURC',
+        name: 'EURC',
+        decimal: 6,
+    },
+    {
+        address: '0x4200000000000000000000000000000000000006',
+        symbol: 'WETH',
+        name: 'Wrapped Ether',
+        decimal: 18,
+    },
+]
+
 export const Balances = () => {
     const [open, setOpen] = useState(false)
     const [selectedToken, setSelectedToken] = useState(null)
     const [isOffChainPaymentSupported, setIsOffChainPaymentSupported] = useState(false)
-    const [isCAMSupported, setCAMSupported] = useState(false)
+    const [isNativeSupported, setIsNativeSupported] = useState(false)
     const [isEditMode, setIsEditMode] = useState(false)
     const [tempOffChainPaymentSupported, setTempOffChainPaymentSupported] = useState(false)
     const [tempSupportedTokens, setTempSupportedTokens] = useState([])
     const [supportedTokens, setSupportedTokens] = useState([])
-    const [tempCAMSupported, setTempCAMSupported] = useState(false)
+    const [tempNativeSupported, setTempNativeSupported] = useState(false)
     const { balanceOfAnAddress, getBalanceOfAnAddress } = useWalletBalance()
     const [isLoading, setIsLoading] = useState(false)
+    const [isFetching, setIsFetching] = useState(false)
     const [tokens, setTokens] = useState([])
+    const [customAddress, setCustomAddress] = useState('')
+    const [customError, setCustomError] = useState('')
     const { contractCMAccountAddress, provider } = useSmartContract()
     const {
-        sftAddress,
-        sftSymbol,
-        sftDecimal,
-        sftName,
         getSupportedTokens,
         getOffChainPaymentSupported,
         setOffChainPaymentSupported,
@@ -61,7 +91,7 @@ export const Balances = () => {
     }
     async function checkIfOffChainPaymentSupported() {
         let res = await getOffChainPaymentSupported()
-        setIsOffChainPaymentSupported(res)
+        setIsOffChainPaymentSupported(!!res)
     }
 
     const handleCloseModal = () => {
@@ -70,19 +100,82 @@ export const Balances = () => {
     }
 
     const handleEditClick = () => {
-        const supportedLower = supportedTokens.map(addr => addr.toLowerCase())
-        const initialTempTokens = tokens.map(token => ({
-            ...token,
-            supported: supportedLower.includes(token.address.toLowerCase()),
-        }))
-        setTempSupportedTokens(initialTempTokens)
+        setTempSupportedTokens(tokens.map(token => ({ ...token })))
         setTempOffChainPaymentSupported(isOffChainPaymentSupported)
-        setTempCAMSupported(isCAMSupported)
+        setTempNativeSupported(isNativeSupported)
+        setCustomAddress('')
+        setCustomError('')
         setIsEditMode(true)
     }
 
     const handleCancelEdit = () => {
         setIsEditMode(false)
+    }
+
+    // Read a token's metadata + the CMAccount's balance of it. Sequential reads:
+    // the public Base Sepolia RPC mishandles bursts (see useSmartContract).
+    async function readToken(address, supportedLower) {
+        const contract = new ethers.Contract(address, ERC20_ABI, provider)
+        const [name, symbol, decimal] = [
+            await contract.name(),
+            await contract.symbol(),
+            await contract.decimals(),
+        ]
+        const balance = await contract.balanceOf(contractCMAccountAddress)
+        return {
+            address,
+            name,
+            symbol,
+            decimal: Number(decimal),
+            balance: ethers.formatUnits(balance, decimal),
+            supported: supportedLower.includes(address.toLowerCase()),
+        }
+    }
+
+    // wallet_watchAsset prompts MetaMask to track the token. This is also the
+    // reliable way to surface tokens on custom networks like Base Sepolia,
+    // where MetaMask's manual "import token" flow is broken.
+    const addTokenToMetaMask = async token => {
+        try {
+            await (window as any).ethereum?.request({
+                method: 'wallet_watchAsset',
+                params: {
+                    type: 'ERC20',
+                    options: {
+                        address: token.address,
+                        symbol: token.symbol,
+                        decimals: token.decimal,
+                    },
+                },
+            })
+        } catch (error) {
+            console.error('wallet_watchAsset failed:', error)
+        }
+    }
+
+    const handleAddCustomToken = async () => {
+        setCustomError('')
+        if (!ethers.isAddress(customAddress)) {
+            setCustomError('Invalid EVM address')
+            return
+        }
+        const addr = customAddress.toLowerCase()
+        if (tempSupportedTokens.find(t => t.address.toLowerCase() === addr)) {
+            setCustomError('Token is already in the list')
+            return
+        }
+        try {
+            setIsLoading(true)
+            const supportedLower = supportedTokens.map(a => a.toLowerCase())
+            const token = await readToken(ethers.getAddress(customAddress), supportedLower)
+            setTempSupportedTokens(prev => [...prev, { ...token, supported: true }])
+            setCustomAddress('')
+        } catch (error) {
+            console.error('Error reading token metadata:', error)
+            setCustomError('Could not read ERC-20 metadata at this address')
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     const handleConfirmEdit = async () => {
@@ -91,30 +184,23 @@ export const Balances = () => {
             if (tempOffChainPaymentSupported !== isOffChainPaymentSupported) {
                 await setOffChainPaymentSupported(tempOffChainPaymentSupported)
             }
-            if (tempCAMSupported !== isCAMSupported) {
-                if (tempCAMSupported) {
+            if (tempNativeSupported !== isNativeSupported) {
+                // Native ETH is represented on-chain as the zero address.
+                if (tempNativeSupported) {
                     await addSupportedToken(ethers.ZeroAddress)
                 } else {
                     await removeSupportedToken(ethers.ZeroAddress)
                 }
             }
-            if (tempSupportedTokens?.length) {
-                const previouslySupported = new Set(supportedTokens.map(addr => addr.toLowerCase()))
-
-                for (const token of tempSupportedTokens) {
-                    const addr = token.address.toLowerCase()
-                    const wasSupported = previouslySupported.has(addr)
-                    const isNowSupported = token.supported
-
-                    try {
-                        if (!wasSupported && isNowSupported) {
-                            await addSupportedToken(token.address)
-                        } else if (wasSupported && !isNowSupported) {
-                            await removeSupportedToken(token.address)
-                        }
-                    } catch (err) {
-                        console.error(`Error updating token ${token.address}:`, err)
-                    }
+            const previouslySupported = new Set(supportedTokens.map(addr => addr.toLowerCase()))
+            for (const token of tempSupportedTokens) {
+                const addr = token.address.toLowerCase()
+                if (addr === ethers.ZeroAddress) continue
+                const wasSupported = previouslySupported.has(addr)
+                if (!wasSupported && token.supported) {
+                    await addSupportedToken(token.address)
+                } else if (wasSupported && !token.supported) {
+                    await removeSupportedToken(token.address)
                 }
             }
             appDispatch(
@@ -124,7 +210,7 @@ export const Balances = () => {
                 }),
             )
             await checkIfOffChainPaymentSupported()
-            await fetchSupportedTokens()
+            await fetchTokens()
             setIsEditMode(false)
         } catch (error) {
             console.error('Error saving configuration:', error)
@@ -139,92 +225,72 @@ export const Balances = () => {
         }
     }
 
-    async function fetchSupportedTokens() {
-        const res = await getSupportedTokens()
-        setCAMSupported(!!res.find(elem => elem === ethers.ZeroAddress))
-        setSupportedTokens(res)
-    }
+    // Token universe = curated Base Sepolia tokens + whatever the CMAccount already
+    // supports on-chain (covers tokens added elsewhere, e.g. the developer UI).
+    async function fetchTokens() {
+        if (!contractCMAccountAddress || !provider) return
+        setIsFetching(true)
+        try {
+            const res = (await getSupportedTokens()) || []
+            const supported = [...res]
+            setSupportedTokens(supported)
+            setIsNativeSupported(!!supported.find(elem => elem === ethers.ZeroAddress))
+            const supportedLower = supported.map(a => a.toLowerCase())
 
-    const fetchTokenBalances = async () => {
-        await store.dispatch('updateBalances')
-        const networkErc20Tokens = store.getters['Assets/networkErc20Tokens'] || []
+            const knownLower = KNOWN_TOKENS.map(t => t.address.toLowerCase())
+            const universe = [
+                ...KNOWN_TOKENS,
+                ...supported
+                    .filter(a => a !== ethers.ZeroAddress && !knownLower.includes(a.toLowerCase()))
+                    .map(address => ({ address })),
+            ]
 
-        const moneriumAddress = '0xF39203dBdc1964B5214207C51E1245184Bec38b5'.toLowerCase()
-        const sft = sftAddress?.toLowerCase()
-        const predefinedSft = sft
-            ? [
-                  {
-                      contract: { _address: sft },
-                      data: {
-                          name: sftName,
-                          symbol: sftSymbol,
-                          decimal: sftDecimal,
-                      },
-                  },
-              ]
-            : []
-        const uniqueTokens = [
-            ...predefinedSft,
-            ...networkErc20Tokens.filter(
-                token => token.contract._address.toLowerCase() !== sft.toLowerCase(),
-            ),
-        ]
-
-        const fetchedTokens = await Promise.all(
-            uniqueTokens.map(async elem => {
+            const fetched = []
+            for (const token of universe) {
                 try {
-                    const contract = new ethers.Contract(
-                        elem.contract._address,
-                        ERC20_BALANCE_ABI,
-                        provider,
-                    )
-                    const balance = await contract.balanceOf(contractCMAccountAddress)
-
-                    return {
-                        address: elem.contract._address,
-                        balance: ethers.formatUnits(balance, elem.data.decimal),
-                        name: elem.data.name,
-                        symbol: elem.data.symbol,
-                        decimal: elem.data.decimal,
-                        supported: supportedTokens
-                            .map(a => a.toLowerCase())
-                            .includes(elem.contract._address.toLowerCase()),
-                    }
+                    fetched.push(await readToken(token.address, supportedLower))
                 } catch (err) {
-                    console.error(`Error fetching balance for ${elem.data.symbol}`, err)
-                    return null
+                    console.error(`Error fetching token ${token.address}`, err)
+                    // Preconfigured tokens still render on hardcoded metadata
+                    // when the RPC read fails; balance is simply unknown.
+                    if (token.symbol) {
+                        fetched.push({
+                            ...token,
+                            balance: '?',
+                            supported: supportedLower.includes(token.address.toLowerCase()),
+                        })
+                    }
                 }
-            }),
-        )
-
-        const sortedTokens = fetchedTokens.filter(Boolean).sort((a, b) => {
-            const aAddr = a.address.toLowerCase()
-            const bAddr = b.address.toLowerCase()
-            const getPriority = addr => {
-                if (addr === sft) return 1
-                if (addr === moneriumAddress) return 2
-                return 3
             }
-
-            return getPriority(aAddr) - getPriority(bAddr)
-        })
-
-        setTokens(sortedTokens)
+            setTokens(fetched)
+        } catch (error) {
+            console.error('Error fetching supported tokens:', error)
+        } finally {
+            setIsFetching(false)
+        }
     }
 
     useEffect(() => {
-        if (!contractCMAccountAddress || !sftAddress || !sftName) return
-        fetchTokenBalances()
-    }, [contractCMAccountAddress, supportedTokens, sftAddress, sftName])
-
-    useEffect(() => {
+        if (!contractCMAccountAddress) return
         getBalanceOfAnAddress(contractCMAccountAddress)
+        checkIfOffChainPaymentSupported()
+        fetchTokens()
     }, [contractCMAccountAddress])
 
-    useEffect(() => {
-        if (!contractCMAccountAddress || !sftAddress || !sftName) return
-        fetchSupportedTokens().then(fetchTokenBalances)
-    }, [contractCMAccountAddress, sftAddress, sftName])
+    const checkboxSx = {
+        m: '0 8px 0 0',
+        color: theme => (!isEditMode ? theme.palette.action.disabled : theme.palette.secondary.main),
+        '&.Mui-checked': {
+            color: theme =>
+                !isEditMode ? theme.palette.action.disabled : theme.palette.secondary.main,
+        },
+        '&.MuiCheckbox-colorSecondary.Mui-checked': {
+            color: theme =>
+                !isEditMode ? theme.palette.action.disabled : theme.palette.secondary.main,
+        },
+    }
+
+    const displayedTokens = isEditMode ? tempSupportedTokens : tokens
 
     return (
         <Box
@@ -237,12 +303,17 @@ export const Balances = () => {
         >
             <Configuration>
                 <Configuration.Title>Balances</Configuration.Title>
+                <Configuration.Paragraphe>
+                    Your Messenger Account holds its own funds on Base Sepolia. Configure which
+                    currencies you accept as payment, and withdraw balances to any address.
+                </Configuration.Paragraphe>
                 <Box
                     sx={{
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '12px',
                         width: 'fit-content',
+                        minWidth: '420px',
                     }}
                 >
                     <Box
@@ -253,41 +324,27 @@ export const Balances = () => {
                         }}
                     >
                         <Typography variant="body2">Accepted Currencies</Typography>
-                        <RefreshOutlined
-                            onClick={() => {
-                                getBalanceOfAnAddress(contractCMAccountAddress)
-                                fetchTokenBalances()
-                            }}
-                            sx={{
-                                cursor: 'pointer',
-                                color: theme => `${theme.palette.text.primary} !important`,
-                            }}
-                        />
+                        {isFetching ? (
+                            <CircularProgress size={16} />
+                        ) : (
+                            <RefreshOutlined
+                                onClick={() => {
+                                    getBalanceOfAnAddress(contractCMAccountAddress)
+                                    fetchTokens()
+                                }}
+                                sx={{
+                                    cursor: 'pointer',
+                                    color: theme => `${theme.palette.text.primary} !important`,
+                                }}
+                            />
+                        )}
                     </Box>
                     <FormControlLabel
                         disabled={!isEditMode}
                         label={<Typography variant="body2">Fiat: off-chain</Typography>}
                         control={
                             <Checkbox
-                                sx={{
-                                    m: '0 8px 0 0',
-                                    color: theme =>
-                                        !isEditMode
-                                            ? theme.palette.action.disabled
-                                            : theme.palette.secondary.main,
-                                    '&.Mui-checked': {
-                                        color: theme =>
-                                            !isEditMode
-                                                ? theme.palette.action.disabled
-                                                : theme.palette.secondary.main,
-                                    },
-                                    '&.MuiCheckbox-colorSecondary.Mui-checked': {
-                                        color: theme =>
-                                            !isEditMode
-                                                ? theme.palette.action.disabled
-                                                : theme.palette.secondary.main,
-                                    },
-                                }}
+                                sx={checkboxSx}
                                 checked={
                                     isEditMode
                                         ? tempOffChainPaymentSupported
@@ -308,31 +365,15 @@ export const Balances = () => {
                         <FormControlLabel
                             disabled={!isEditMode}
                             label={
-                                <Typography variant="body2">CAM: {balanceOfAnAddress}</Typography>
+                                <Typography variant="body2">
+                                    ETH: {Number(balanceOfAnAddress || 0).toFixed(6)}
+                                </Typography>
                             }
                             control={
                                 <Checkbox
-                                    sx={{
-                                        m: '0 8px 0 0',
-                                        color: theme =>
-                                            !isEditMode
-                                                ? theme.palette.action.disabled
-                                                : theme.palette.secondary.main,
-                                        '&.Mui-checked': {
-                                            color: theme =>
-                                                !isEditMode
-                                                    ? theme.palette.action.disabled
-                                                    : theme.palette.secondary.main,
-                                        },
-                                        '&.MuiCheckbox-colorSecondary.Mui-checked': {
-                                            color: theme =>
-                                                !isEditMode
-                                                    ? theme.palette.action.disabled
-                                                    : theme.palette.secondary.main,
-                                        },
-                                    }}
-                                    checked={isEditMode ? tempCAMSupported : isCAMSupported}
-                                    onChange={e => setTempCAMSupported(e.target.checked)}
+                                    sx={checkboxSx}
+                                    checked={isEditMode ? tempNativeSupported : isNativeSupported}
+                                    onChange={e => setTempNativeSupported(e.target.checked)}
                                 />
                             }
                         />
@@ -342,7 +383,7 @@ export const Balances = () => {
                                 onClick={() => {
                                     setSelectedToken(null)
                                     handleOpenModal({
-                                        symbol: 'CAM',
+                                        symbol: 'ETH',
                                     })
                                 }}
                             >
@@ -350,8 +391,8 @@ export const Balances = () => {
                             </Button>
                         )}
                     </Box>
-                    {tokens.length > 0 &&
-                        tokens.map((elem, index) => {
+                    {displayedTokens.length > 0 &&
+                        displayedTokens.map((elem, index) => {
                             return (
                                 <Box
                                     sx={{
@@ -360,7 +401,7 @@ export const Balances = () => {
                                         gap: '8px',
                                         justifyContent: 'space-between',
                                     }}
-                                    key={index}
+                                    key={elem.address}
                                 >
                                     <Tooltip
                                         title={
@@ -436,47 +477,82 @@ export const Balances = () => {
                                             }
                                             control={
                                                 <Checkbox
-                                                    sx={{
-                                                        m: '0 8px 0 0',
-                                                        color: theme =>
-                                                            !isEditMode
-                                                                ? theme.palette.action.disabled
-                                                                : theme.palette.secondary.main,
-                                                        '&.Mui-checked': {
-                                                            color: theme =>
-                                                                !isEditMode
-                                                                    ? theme.palette.action.disabled
-                                                                    : theme.palette.secondary.main,
-                                                        },
-                                                    }}
-                                                    checked={
-                                                        isEditMode && tempSupportedTokens
-                                                            ? tempSupportedTokens[index]?.supported
-                                                            : elem?.supported
-                                                    }
+                                                    sx={checkboxSx}
+                                                    checked={!!elem.supported}
                                                     onChange={e => {
-                                                        let newArray = [...tempSupportedTokens]
-                                                        newArray[index].supported = e.target.checked
-                                                        setTempSupportedTokens(newArray)
+                                                        if (!isEditMode) return
+                                                        setTempSupportedTokens(prev =>
+                                                            prev.map((t, i) =>
+                                                                i === index
+                                                                    ? {
+                                                                          ...t,
+                                                                          supported:
+                                                                              e.target.checked,
+                                                                      }
+                                                                    : t,
+                                                            ),
+                                                        )
                                                     }}
                                                 />
                                             }
                                         />
                                     </Tooltip>
                                     {!isEditMode && (
-                                        <Button
-                                            variant="contained"
-                                            onClick={() => {
-                                                setSelectedToken(elem)
-                                                handleOpenModal(elem)
-                                            }}
-                                        >
-                                            Withdraw
-                                        </Button>
+                                        <Box sx={{ display: 'flex', gap: '8px' }}>
+                                            <Tooltip
+                                                title="Track this token in MetaMask (importing custom tokens manually is broken on Base Sepolia)"
+                                                placement="top"
+                                                arrow
+                                            >
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => addTokenToMetaMask(elem)}
+                                                >
+                                                    + MetaMask
+                                                </Button>
+                                            </Tooltip>
+                                            <Button
+                                                variant="contained"
+                                                onClick={() => {
+                                                    setSelectedToken(elem)
+                                                    handleOpenModal(elem)
+                                                }}
+                                            >
+                                                Withdraw
+                                            </Button>
+                                        </Box>
                                     )}
                                 </Box>
                             )
                         })}
+                    {isEditMode && (
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <Box sx={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                <TextField
+                                    value={customAddress}
+                                    onChange={e => setCustomAddress(e.target.value)}
+                                    placeholder="Custom token address 0x…"
+                                    sx={{
+                                        flex: '1',
+                                        '& .MuiInputBase-root': { height: '40px' },
+                                        '& input': { fontSize: '14px' },
+                                    }}
+                                />
+                                <Button
+                                    variant="contained"
+                                    disabled={isLoading || !customAddress}
+                                    onClick={handleAddCustomToken}
+                                >
+                                    <Typography variant="caption">Add token</Typography>
+                                </Button>
+                            </Box>
+                            {customError && (
+                                <Typography variant="caption" color="error">
+                                    {customError}
+                                </Typography>
+                            )}
+                        </Box>
+                    )}
                     <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
                         {!isEditMode ? (
                             <Button variant="contained" onClick={handleEditClick}>
@@ -519,7 +595,7 @@ export const Balances = () => {
                     }}
                 >
                     <Typography variant="body1" component="span">
-                        Withdraw {selectedToken ? selectedToken.symbol : 'CAM'}
+                        Withdraw {selectedToken ? selectedToken.symbol : 'ETH'}
                     </Typography>
                     <IconButton
                         aria-label="close"
@@ -546,7 +622,7 @@ export const Balances = () => {
                     <CamWithdraw
                         setOpen={setOpen}
                         token={selectedToken}
-                        fetchTokenBalances={fetchTokenBalances}
+                        fetchTokenBalances={fetchTokens}
                     />
                 </DialogContent>
             </DialogAnimate>

@@ -228,7 +228,9 @@ export const getPartnersWithServices = async (response: PartnersResponseType) =>
     const selectedNetwork = store.getters['Network/selectedNetwork']
     const networkName = selectedNetwork.name.toLowerCase()
 
-    if (networkName !== 'columbus' && networkName !== 'camino') {
+    // Enrich on any network with deployed Messenger contracts (legacy gate was
+    // columbus/camino only, which skipped enrichment entirely on Base Sepolia).
+    if (networkName !== 'columbus' && networkName !== 'camino' && networkName !== 'base-sepolia') {
         return response
     }
 
@@ -253,12 +255,13 @@ export const getPartnersWithServices = async (response: PartnersResponseType) =>
                     const { supportedServices, wantedServices, bots, supportedCurrencies } =
                         await fetchContractServices(contractAddress, provider)
 
+                    // TTM CMAccount service tuple is (restrictedRate, capabilities) — no fee.
                     const parsedSupportedServices =
                         supportedServices?.[0]?.map((service, index) => ({
                             name: service,
-                            fee: ethers.formatEther(supportedServices[1][index][0]),
-                            rackRates: supportedServices[1][index][1],
-                            capabilities: supportedServices[1][index][2],
+                            fee: '0',
+                            rackRates: supportedServices[1][index][0],
+                            capabilities: supportedServices[1][index][1],
                         })) || []
 
                     const parsedWantedServices = wantedServices.map(elem => ({
