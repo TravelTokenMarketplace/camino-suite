@@ -145,6 +145,24 @@ then, once creds are provided, real mode (nonce→sign→token→WebSDK sandbox�
 
 ---
 
+## Workstream 2 follow-ups (operator-requested Jul 9, 2026 — next iteration, not now)
+
+1. **Multi-provider verification.** Make the gateway provider-pluggable; target lineup:
+   - `sumsub-mock` — today's mock mode, promoted to a first-class provider;
+   - `sumsub-live` — today's real mode;
+   - `eudi-wallet` — EUDI Wallet **reference implementation**; natural fit with the APTITUDE
+     UC 4.14 work (UAegean's SEDIT-X intermediary wraps OpenID4VP/OpenID4VCI behind plain REST,
+     so it slots in as another REST provider — see `aptitude/`).
+   Provider interface ≈ `start(address, variant) → session/token` + `result → variantState`.
+   Decide then whether the on-chain registry stays boolean-per-variant (current shape, privacy-
+   friendly) with provider detail off-chain only, or gains a provider dimension (new variants,
+   a provider field, or richer event metadata — registry is UUPS, so upgradeable in place).
+2. **Private verification-details API** — admin-only at first, **monetizable later** (sellable
+   access). Per-address verification records: **provider, verification date, variant, metadata**
+   (Sumsub applicantId / EUDI credential type, tx hash, …). Auth should anticipate paid API keys
+   (per-key quotas/billing hooks), not just one admin token; store must become durable
+   (SQLite/Postgres) at that point — the current JSON file store is demo-grade.
+
 ## Upgradeability & gas sponsoring (decisions)
 - **Upgradeability — now for the new contract, deferred for CNS.** `KYCRegistry` ships UUPS-upgradeable
   from day one (template is already upgrade-ready; see 2a). The **CNS ms2 contracts are plain
