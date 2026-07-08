@@ -143,8 +143,13 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
   Verified: dev renders at `/cns`, prod build emits root asset paths.
 - Stale `gh-pages` branch left on the remote (branch deletion needs operator approval);
   harmless, not the deploy path.
-- **Operator to do once** (OAuth, can't be automated): Cloudflare dashboard →
-  Workers & Pages → Create → Pages → Connect to Git → pick
-  `TravelTokenMarketplace/camino-name-service-frontend` — preset **Create React App**,
-  build `npm run build`, output `build`, no env vars. Every push to `main` then deploys
-  to `<project>.pages.dev`.
+- ~~Operator to do once: dashboard Git-connect~~ — superseded: operator asked for the
+  API route. The machine's **wrangler OAuth token** (mikrub@gmail.com, account
+  `851423c4…`) already has `pages (write)`, so the deploy went **direct-upload**:
+  `wrangler pages project create camino-name-service` (first attempt hit a transient
+  CF 500, retry succeeded) + `wrangler pages deploy build`. **Live:
+  https://camino-name-service.pages.dev** (repo stays private + unconnected). Verified
+  over HTTP: `/`, `/cns`, `/cns/my-domains` all 200 with SPA fallback, JS bundle 200.
+  Push-to-deploy does NOT exist — redeploy = `npm run build && npx wrangler pages
+  deploy build --project-name camino-name-service --branch main` (in README). Stale
+  `gh-pages` branch deleted (operator-approved).
