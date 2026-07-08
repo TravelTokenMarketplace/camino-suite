@@ -268,3 +268,21 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
   hosted services only ever get the low-privilege oracle key; a leak is contained by
   `revokeRole` + re-grant from the local admin. Transio also still holds ORACLE_ROLE
   (harmless, local-only) — revoke if wanted. Docs/render.yaml updated (`2811048`).
+
+## Workstream 2 — LIVE (2026-07-09)
+- **Gateway: https://camino-kyc-gateway.onrender.com** (operator did the Render
+  blueprint deploy; free tier, auto-deploys on push to `main`, secrets in dashboard
+  env). Verified from outside: `/config` real mode + dedicated oracle, `/sync` 401
+  without ADMIN_TOKEN, full nonce→personal_sign→accessToken handshake returns a real
+  Sumsub `_act-jwt` token, `/verified` chain reads. One transient Render "Not Found"
+  blip observed right after deploy — retry resolved.
+- **Frontend: https://camino-kyc.pages.dev** (Cloudflare Pages project `camino-kyc`,
+  direct upload like CNS — push ≠ deploy; built with `VITE_GATEWAY_URL` = Render URL).
+  Browser-verified against the production stack: real-mode chips, check-any-address
+  reads Base Sepolia (webhook-test address shows KYC verified).
+- **Still pending (operator, dashboard-only): Sumsub webhook** — `applicantReviewed` →
+  `https://camino-kyc-gateway.onrender.com/webhook/applicant_reviewed`, HMAC_SHA256,
+  secret = Render's `SUMSUB_WEBHOOK_SECRET`; then the live MetaMask + WebSDK run
+  (production account — completed checks may bill; `sbx:` token an option).
+- Total hosting cost: **$0/mo** (Render free + CF Pages free). zsh footgun for the
+  log: `for path in …` clobbers PATH (zsh ties lowercase `path` to it).
