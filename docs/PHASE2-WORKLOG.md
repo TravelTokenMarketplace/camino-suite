@@ -213,3 +213,25 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
   decision (host the gateway somewhere vs. local-only demo) left to the operator.
 - **Real mode remains blocked on operator Sumsub creds** (API token, secret, webhook
   secret, level→variant map) — wiring is done, `.env.example` documents the slots.
+
+## Workstream 2 — repo pushed + real Sumsub mode verified (2026-07-09)
+- Operator approved: **`TravelTokenMarketplace/camino-kyc` created (private) + pushed**
+  (`65dcbab`).
+- **Operator provided a Sumsub app token** ("Applicant Link Creator", `prd:` =
+  **production**, in `gateway/.env`, gitignored). Probed via our client: it's the
+  **chain4travel production account** (`clientId: chain4travel.com_38513`); levels
+  `basic-kyc-level`, `basic-kyb-level`, `id-liveness-poa-aml`, `company-zero` — the
+  gateway's **default level→variant map matches as-is**. Token can list levels, read
+  applicants (404 on unknown, not 403) and mint SDK tokens.
+- **Real-mode flow verified (scripted):** `MODE=real` boot → nonce → `personal_sign`
+  → `POST /accessToken` → **202 with a real `_act-jwt` WebSDK token** from production
+  Sumsub. Frontend on :3001 shows the real-mode chips/panel. Token generation alone
+  does NOT create an applicant (probe read after minting → still 404).
+- **Still open for full real-mode e2e:**
+  1. **Webhook leg** — needs a Sumsub dashboard webhook (`applicantReviewed`) pointing
+     at a **publicly reachable** gateway URL + its digest secret in
+     `SUMSUB_WEBHOOK_SECRET` (local demo ⇒ tunnel). Until then reviews don't
+     auto-publish on-chain; `/sync` + admin helpers bridge manually.
+  2. **Live WebSDK run** — operator MetaMask test; NOTE it's the production account:
+     launching the WebSDK creates a real applicant and a completed verification may
+     bill C4T/TTM. Consider a sandbox (`sbx:`) token for throwaway demos.
