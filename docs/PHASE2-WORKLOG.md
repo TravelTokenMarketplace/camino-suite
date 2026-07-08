@@ -131,3 +131,20 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
 - Both repos got a TTM-oriented `README.md` (what changed vs. c4t, run/deploy
   instructions, deployed addresses) + `CLAUDE.md` (AI orientation with the session's
   gotchas), camino-suite style.
+
+## Deploy target switched: GitHub Pages → Cloudflare Pages (2026-07-08)
+- Operator decision: **Cloudflare Pages, Git-connected, no custom domain** — free tier
+  deploys from a **private** GitHub repo (sidesteps the GitHub-Pages paywall; repo
+  stays private).
+- Frontend reverted to **root-path serving**: `homepage` field dropped (dev back at
+  `localhost:3000/cns`), `gh-pages` pkg + `deploy:pages` scripts removed, no `404.html`
+  (Cloudflare auto-serves `index.html` for SPA routes). Committed `.npmrc`
+  (`legacy-peer-deps=true`) so Cloudflare's `npm install`/`npm ci` passes.
+  Verified: dev renders at `/cns`, prod build emits root asset paths.
+- Stale `gh-pages` branch left on the remote (branch deletion needs operator approval);
+  harmless, not the deploy path.
+- **Operator to do once** (OAuth, can't be automated): Cloudflare dashboard →
+  Workers & Pages → Create → Pages → Connect to Git → pick
+  `TravelTokenMarketplace/camino-name-service-frontend` — preset **Create React App**,
+  build `npm run build`, output `build`, no env vars. Every push to `main` then deploys
+  to `<project>.pages.dev`.
