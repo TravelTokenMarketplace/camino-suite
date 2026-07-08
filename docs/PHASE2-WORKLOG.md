@@ -1,4 +1,4 @@
-# Worklog — Phase 2: CNS + KYC/KYB on Base (Workstream 1: CNS)
+# Worklog — Phase 2: CNS + KYC/KYB on Base
 
 Chronological log of the Phase-2 work, kept for undo/redo. Newest entries at the bottom.
 See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORKLOG.md`.
@@ -160,3 +160,56 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
   did an `eth_chainId` detection round-trip; one dropped call → retry loop. Fix:
   `staticNetwork: true` in the provider options (wallet.ts) — no detection calls at
   all. Redeployed; drpc CORS verified fine from the pages.dev origin.
+
+## Workstream 2 — KYC/KYB: built + mock-mode verified (2026-07-08/09)
+- **New repo `ttm/camino-kyc`** (single repo: `contracts/` + `gateway/` + `frontend/`,
+  mirroring the kyc-poc all-in-one shape). New code, not a fork — templates were the
+  private `c4t/kyc-poc` + `c4t/sumsub_gateway`. Local commit `65dcbab`.
+  **Blocked on operator: `gh repo create TravelTokenMarketplace/camino-kyc --private`
+  + push** (permission gate on creating org repos; command is ready to run).
+- **2a KYCRegistry deployed (Base Sepolia):** proxy
+  `0x96e1Ac763f0e29835F9a700C81fA630a9E8Cff63` (impl `0x66F9…afC1`, block 43880569),
+  UUPS + AccessControl (`ORACLE_ROLE` writer = Transio deployer; `DEFAULT_ADMIN_ROLE`
+  upgrades) + **ERC-2771-aware** (forwarder = `address(0)` now; immutable in the impl,
+  so a later gas-sponsoring pass = upgrade with `constructorArgs: [forwarder]`).
+  5 hardhat tests incl. the appended-sender meta-tx path. Gotchas: OZ upgradeable
+  5.6.x removed `__UUPSUpgradeable_init`; `upgrades.deployProxy` post-checks can trip
+  on drpc replica lag (deploy script now retries the ERC1967 slot read).
+- **2c/2d gateway (Express, plain JS like partner-showroom-api):** `GET /nonce`
+  (ts+entropy, 194-hex format kept from the Go gateway), `POST /accessToken`
+  (ownership proof via **personal_sign** — MetaMask can't raw-keccak-sign like the Go
+  pubkey flow; variant allowlist), `POST /webhook/applicant_reviewed` (HMAC
+  `X-Payload-Digest`, SHA1/256/512 via `X-Payload-Digest-Alg`), `GET
+  /verified/{network}/{address}`, `GET /sync`, Sumsub admin helpers
+  (applicant-by-externalID, update-externalID). **MODE=mock|real** env toggle surfaced
+  at `GET /config`; mock mode adds `/mock/requests` + `/mock/approve` (oracle writes
+  directly). Firestore → JSON store; P-chain bit offsets → variant enum.
+- **Sumsub docs pass (operator asked):** no official server-side npm SDK exists
+  (`@sumsub/*` = frontend/mobile only; `sumsub-node-sdk` is third-party) → kept the
+  hand-rolled HMAC REST client. Two API drifts vs the 2023 Go gateway folded in:
+  access tokens now `POST /resources/accessTokens/sdk` (JSON body), new webhooks
+  default to `HMAC_SHA256_HEX`.
+- **New RPC gotcha: drpc replica lag ⇒ stale reads after writes.** `tx.wait()` on one
+  replica, next `eth_call` on a lagging one → state appears unchanged (broke
+  idempotency + post-write verification). Fix in `gateway/lib/registry.js`: reads pin
+  `blockTag` to the gateway's **last write block** (oracle is the sole writer) with
+  retries while the replica catches up.
+- **2b frontend:** **Vite + React 18** (deliberate deviation from the plan's "CRA" —
+  CRA is deprecated/archived; matches the convergence-stack direction), ethers v6,
+  `@sumsub/websdk-react` for real mode. Connect MetaMask (CNS wallet.ts pattern),
+  start-verification handshake, on-chain status badges, check-any-address (pure chain
+  read), demo admin panel (mode chip, request list with approve/reject, sync). Dev
+  :3001; `VITE_GATEWAY_URL` (default `http://localhost:4000`).
+- **2e verified (mock, scripted + browser):** 16/16 scripted checks green — nonce
+  format, sign/token, wrong-sig/forged-nonce/unknown-variant 400s, pending request
+  recorded, mock approve → real Base Sepolia tx → `/verified` flips, webhook
+  (HMAC-signed synthetic payload) → on-chain KYB, duplicate webhook idempotent,
+  tampered digest 400, `/sync` re-publishes forced store/chain divergence. Browser
+  (vite dev): check-any-address reads chain, admin Reject→Approve loop with live txs,
+  zero console errors. **Not yet verified: live MetaMask popup flow** (same
+  automation limit as CNS) — needs the operator once, on :3001.
+- **Not deployed to Cloudflare Pages** (unlike CNS): the dapp needs the gateway, and
+  a public frontend pointing at localhost would be broken for anyone else. Deploy
+  decision (host the gateway somewhere vs. local-only demo) left to the operator.
+- **Real mode remains blocked on operator Sumsub creds** (API token, secret, webhook
+  secret, level→variant map) — wiring is done, `.env.example` documents the slots.

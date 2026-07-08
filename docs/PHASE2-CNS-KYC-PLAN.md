@@ -2,7 +2,9 @@
 
 > Companion to `PHASE1-PLAN.md` (Partner Showroom + CMAccount manager on Base Sepolia).
 > Phase 2 brings two more Camino features to Base: **CNS** first, then **KYC/KYB**.
-> Status: **Workstream 1 (CNS) in progress** — see `PHASE2-WORKLOG.md` for the running log.
+> Status: **Workstream 1 (CNS) done** (live at https://camino-name-service.pages.dev);
+> **Workstream 2 (KYC/KYB) built + mock-verified** in `ttm/camino-kyc` — real-Sumsub mode
+> awaits operator creds. See `PHASE2-WORKLOG.md` for the running log.
 > Decisions below are confirmed with the operator.
 
 ## Context
