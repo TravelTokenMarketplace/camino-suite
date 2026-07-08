@@ -153,3 +153,10 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
   Push-to-deploy does NOT exist — redeploy = `npm run build && npx wrangler pages
   deploy build --project-name camino-name-service --branch main` (in README). Stale
   `gh-pages` branch deleted (operator-approved).
+- **Live MetaMask test (operator) + flaky-connect fix.** Operator connected on the live
+  site (Transio deployer in MetaMask); first attempt looked broken — console showed
+  ethers' `JsonRpcProvider failed to detect network; retry in 1s` loop, then recovered
+  (all drpc calls 200). Cause: `getProvider()` builds a NEW provider per query and each
+  did an `eth_chainId` detection round-trip; one dropped call → retry loop. Fix:
+  `staticNetwork: true` in the provider options (wallet.ts) — no detection calls at
+  all. Redeployed; drpc CORS verified fine from the pages.dev origin.
