@@ -110,3 +110,24 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
   registration/renewal. The Connect MetaMask button fires `eth_requestAccounts`; the
   extension popup can't be driven by automation. Everything after the signer exists is the
   same code path exercised above.
+
+## Header cleanup + GitHub Pages + repo docs (2026-07-08)
+- Operator feedback: drop "Wallet" from the top-left app-switcher and fix the icon.
+  Removed the one-item `Select` entirely (`TLNavbar.tsx`): static logo header
+  (wordmark at natural aspect — the old `width:35%/height:50%` stretched it ~40%),
+  PUBLIC_URL-safe asset path, click → `/cns`. Favicon checked: already the Camino
+  pinwheel, not the CRA default.
+- **GitHub Pages** (mirrors camino-suite): `homepage` in package.json, router
+  `basename: process.env.PUBLIC_URL`, `%PUBLIC_URL%` refs in `public/index.html`,
+  `deploy:pages` script (gh-pages pkg + `404.html` = index.html SPA fallback).
+  `gh-pages` branch built + pushed. **Gotcha:** with `homepage` set, the CRA dev
+  server also serves under `/camino-name-service-frontend/` — the bare `/cns` URL
+  renders blank (basename mismatch).
+- **Blocked on operator: repo visibility.** Pages on a private repo needs a paid org
+  plan (`422 Your current plan does not support GitHub Pages`); flipping
+  `camino-name-service-frontend` public requires explicit operator approval (permission
+  gate). Once public: enable Pages from `gh-pages` branch → site at
+  `https://traveltokenmarketplace.github.io/camino-name-service-frontend/`.
+- Both repos got a TTM-oriented `README.md` (what changed vs. c4t, run/deploy
+  instructions, deployed addresses) + `CLAUDE.md` (AI orientation with the session's
+  gotchas), camino-suite style.
