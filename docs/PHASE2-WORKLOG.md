@@ -286,3 +286,20 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
   (production account — completed checks may bill; `sbx:` token an option).
 - Total hosting cost: **$0/mo** (Render free + CF Pages free). zsh footgun for the
   log: `for path in …` clobbers PATH (zsh ties lowercase `path` to it).
+
+## Workstream 2 — hosted demo switched to mock mode (2026-07-09)
+- **Operator hit "Failed to fetch" on the live site** → diagnosed: Render's edge was
+  intermittently routing to no-server (`x-render-routing: no-server`, ~30-50% of
+  requests, oscillating; no platform incident per status.render.com). Mitigations:
+  frontend now **retries gateway calls** (4 attempts, backoff, friendly wake-from-
+  sleep message; `gwFetch` in `api.ts`), plus fresh deploys pushed; stability
+  recovered to 10/10 afterwards.
+- **Operator request: hosted demo → mock mode.** `render.yaml` `MODE=mock` (blueprint
+  sync applied it on push — no dashboard action needed), admin panel gained an
+  **Admin token** field (persisted in localStorage, sent as bearer on `/mock/*` +
+  `/sync`). Real mode still available locally / by flipping render.yaml back once the
+  Sumsub webhook is configured.
+- **Hosted mock e2e green** (through Render, commit `1f09d2a`): mock accessToken 202 →
+  pending request → admin approve → tx `0x2725dd…d2631c` from the dedicated oracle →
+  `/verified` flips; browser-verified on camino-kyc.pages.dev (token entered in
+  panel, request table + approve buttons live).
