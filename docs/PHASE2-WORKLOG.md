@@ -235,3 +235,28 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
   2. **Live WebSDK run** — operator MetaMask test; NOTE it's the production account:
      launching the WebSDK creates a real applicant and a completed verification may
      bill C4T/TTM. Consider a sandbox (`sbx:`) token for throwaway demos.
+
+## Workstream 2 — deployment + public webhook leg validated (2026-07-09)
+- **On-chain reads confirmed variant-granular** (operator Q): `getState` returns
+  KYC (individual) and KYB (business) flags separately; provider/date/metadata are
+  NOT on-chain → covered by the future private details API (see plan follow-ups §).
+- **Follow-ups written to plan doc** (operator-requested): multi-provider gateway
+  (sumsub-mock / sumsub-live / EUDI-wallet ref impl, APTITUDE tie-in) + private,
+  later-sellable verification-details API.
+- **Gateway hardened for public exposure:** `ADMIN_TOKEN` bearer gate on `/sync`,
+  `/admin/*`, `/mock/*` (open when unset = local demo; boot warning). Public surface:
+  `/config`, `/nonce`, `/accessToken` (sig-verified), `/verified` (reads),
+  `/webhook/applicant_reviewed` (HMAC-verified). Commit `999397d`.
+- **Public webhook leg VALIDATED end-to-end:** cloudflared quick tunnels failed
+  (3 attempts, QUIC + http2 — edge 404s despite clean registration; regional
+  trycloudflare flakiness) → **localtunnel** worked. Through the public URL:
+  HMAC-SHA256 synthetic `applicantReviewed` → 202 → `setVerified` tx
+  `0x67e348…4070d` on Base Sepolia → `/verified` flips. Architecture proven;
+  only the Sumsub-dashboard webhook config remains (dashboard-only, no API).
+- **Deployment decision (operator): gateway → Render free tier; frontend → Cloudflare
+  Pages** (CNS pattern). `render.yaml` blueprint committed (`0ce7402`): rootDir
+  `gateway`, free plan, healthcheck `/config`, env slots MODE/ORACLE_PRIVATE_KEY/
+  SUMSUB_*/ADMIN_TOKEN. Awaiting one-time operator actions: Render GitHub OAuth +
+  blueprint deploy, then Sumsub dashboard webhook (applicantReviewed → Render URL,
+  digest secret = SUMSUB_WEBHOOK_SECRET). Frontend Pages deploy follows once the
+  Render URL exists (build with `VITE_GATEWAY_URL`).
