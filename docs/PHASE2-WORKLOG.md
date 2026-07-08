@@ -260,3 +260,11 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
   blueprint deploy, then Sumsub dashboard webhook (applicantReviewed → Render URL,
   digest secret = SUMSUB_WEBHOOK_SECRET). Frontend Pages deploy follows once the
   Render URL exists (build with `VITE_GATEWAY_URL`).
+- **Oracle key separation (operator veto on shipping the Transio key to Render —
+  correct call):** minted a dedicated oracle `0x5c93e421A787424492e3E09390aE5f42091C38F3`,
+  granted `ORACLE_ROLE` (tx `0x5688f2…b2ddd`), funded 0.002 ETH (tx `0x10b65a…32726`);
+  gateway `.env` rebuilt around it and a webhook write verified from the new sender
+  (tx `0xdeb7a4…a2f1`). **The Transio admin/upgrader key never leaves this machine** —
+  hosted services only ever get the low-privilege oracle key; a leak is contained by
+  `revokeRole` + re-grant from the local admin. Transio also still holds ORACLE_ROLE
+  (harmless, local-only) — revoke if wanted. Docs/render.yaml updated (`2811048`).
