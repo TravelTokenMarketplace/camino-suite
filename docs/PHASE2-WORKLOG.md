@@ -303,3 +303,13 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
   pending request → admin approve → tx `0x2725dd…d2631c` from the dedicated oracle →
   `/verified` flips; browser-verified on camino-kyc.pages.dev (token entered in
   panel, request table + approve buttons live).
+
+## Session close (2026-07-09)
+- **Transio's leftover `ORACLE_ROLE` revoked** (tx `0x7ac61f…673707`): Transio =
+  DEFAULT_ADMIN_ROLE only; `0x5c93…38F3` = sole oracle. Verified on-chain.
+- Camino root `CLAUDE.md` gained a minimal **"Active work — handover"** section
+  pointing here (plan doc + worklogs + live demo URLs) — the plan doc stays the
+  single source of truth for status.
+- Open items unchanged: Sumsub dashboard webhook → flip `render.yaml` to `MODE=real`;
+  real-mode WebSDK live run (prod account bills; `sbx:` token option); future
+  follow-ups in the plan doc § Workstream 2 follow-ups.
