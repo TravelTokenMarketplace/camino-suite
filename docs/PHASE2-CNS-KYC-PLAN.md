@@ -167,6 +167,14 @@ then, once creds are provided, real mode (nonce→sign→token→WebSDK sandbox�
    (Sumsub applicantId / EUDI credential type, tx hash, …). Auth should anticipate paid API keys
    (per-key quotas/billing hooks), not just one admin token; store must become durable
    (SQLite/Postgres) at that point — the current JSON file store is demo-grade.
+3. **Wallet-login to the API → self-service views (later; groups two asks).** Reuse the
+   existing ownership proof (`GET /nonce` → `personal_sign` → `verifyUserSignature`, already
+   used by `/accessToken`) to gate per-wallet endpoints — no new auth infra. Unlocks:
+   (a) a **"my events"** view (`GET /events/mine`, filtering the audit trail to the recovered
+   signer — today `/events` is admin-only); (b) the website's **"Request disclosure"** panel
+   (selective KYB-attribute disclosure — a mock in `ttm-new-website/src/app/verification`,
+   deliberately kept). Gap is narrow: current verified status is already public per-address
+   on-chain; only the event *history* is gated.
 
 ## Upgradeability & gas sponsoring (decisions)
 - **Upgradeability — now for the new contract, deferred for CNS.** `KYCRegistry` ships UUPS-upgradeable
