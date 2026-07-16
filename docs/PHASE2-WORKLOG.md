@@ -1,7 +1,9 @@
 # Worklog — Phase 2: CNS + KYC/KYB on Base
 
 Chronological log of the Phase-2 work, kept for undo/redo. Newest entries at the bottom.
-See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORKLOG.md`.
+Forward-looking roadmap + architecture now live **per-repo**
+(`camino-kyc/docs/ROADMAP.md`, `camino-name-service/docs/ROADMAP.md` + `-frontend`);
+`PHASE2-CNS-KYC-PLAN.md` here is now a thin index. Phase-1 history: `docs/WORKLOG.md`.
 
 ## Kickoff (2026-07-08)
 - Operator confirmed the gas-sponsoring currency: **Monerium EURe** (was ambiguously "EURI");
