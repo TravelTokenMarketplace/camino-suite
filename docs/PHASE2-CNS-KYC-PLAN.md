@@ -3,8 +3,13 @@
 > Companion to `PHASE1-PLAN.md` (Partner Showroom + CMAccount manager on Base Sepolia).
 > Phase 2 brings two more Camino features to Base: **CNS** first, then **KYC/KYB**.
 > Status: **Workstream 1 (CNS) done** (live at https://camino-name-service.pages.dev);
-> **Workstream 2 (KYC/KYB) built + mock-verified** in `ttm/camino-kyc` — real-Sumsub mode
-> awaits operator creds. See `PHASE2-WORKLOG.md` for the running log.
+> **Workstream 2 (KYC/KYB) LIVE and de-mocked** in `ttm/camino-kyc` — hosted gateway runs
+> `MODE=real` against a Sumsub **SANDBOX** token, dashboard webhook configured. **KYC verified
+> end-to-end** (WebSDK → GREEN → webhook → on-chain) on WebSDK-2.0 level "new individual 2.0";
+> full lifecycle handled (reset/deactivated/deleted/RED → on-chain revoke) + `/events` trail.
+> **Open:** KYB WebSDK live run (company level "new company 2.0"). See `PHASE2-WORKLOG.md`
+> (2026-07-16 entry) for the running log. Note: `basic-*-level` are retired WebSDK 1.0 — never
+> migrate them (shared with the live Suite); use the new 2.0 levels.
 > Decisions below are confirmed with the operator.
 
 ## Context

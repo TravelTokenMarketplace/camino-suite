@@ -313,3 +313,52 @@ See `docs/PHASE2-CNS-KYC-PLAN.md` for the plan; Phase-1 history is in `docs/WORK
 - Open items unchanged: Sumsub dashboard webhook → flip `render.yaml` to `MODE=real`;
   real-mode WebSDK live run (prod account bills; `sbx:` token option); future
   follow-ups in the plan doc § Workstream 2 follow-ups.
+
+## Workstream 2 — DE-MOCKED to real Sumsub SANDBOX + full lifecycle (2026-07-16)
+Regained Sumsub access; de-mocked the hosted KYC demo end-to-end. Key decision: use the
+Sumsub **SANDBOX** environment, not production — the account (`chain4travel.com_38513`) is
+shared with the live Camino Suite, and sandbox is isolated/free/simulated, so nothing that
+serves the Suite was touched (the whole "additive" constraint).
+
+- **Sandbox app token.** New dedicated token **"transio-kyc gateway (sandbox)"**
+  (`sbx:M40dyp…`, broad default perms) — separate from the existing sandbox token
+  "KYC BE v2" (which serves the Suite; left untouched). In `gateway/.env` + Render env.
+  Verified: authenticates + mints WebSDK access tokens for both variants.
+- **Real mode live.** `render.yaml` `MODE` is a **blueprint value** (not a dashboard var) —
+  flipping it needs a commit+push (dashboard edits get reverted on deploy). `MODE=real`
+  (commit `ebf84ed`). `/config` confirmed real + oracle `0x5c93…38F3` + levels map. Full
+  live handshake (`/nonce`→personal_sign→`/accessToken`) mints real `_act` sandbox tokens.
+- **Sumsub sandbox webhook** created (operator): `applicantReviewed` (All applicant types)
+  → `…/webhook/applicant_reviewed`, HMAC_SHA256, secret = `SUMSUB_WEBHOOK_SECRET`
+  (`d10dec…`, matches Render + `.env`). Later added `applicantReset/Deactivated/Deleted`.
+- **WebSDK-1.0 gotcha (the big one).** The account's `basic-kyc-level` / `basic-kyb-level`
+  are **retired WebSDK 1.0** → the SDK shows "Verifica non disponibile" / "Invalid
+  parameters". Do NOT migrate them (shared with the live Suite). Fix = **new WebSDK 2.0
+  levels**: operator created **"new individual 2.0"** (KYC) + **"new company 2.0"** (KYB).
+  `company-zero` looked usable (2.0) but is a **non-launchable template** — mints a token
+  yet the SDK instantly "expires" and creates NO applicant; don't use it. Level→variant is
+  now a non-secret `render.yaml` value: `{"new individual 2.0":"KYC_BASIC","new company 2.0":"KYB_BASIC"}`
+  (commits `c855f4b`→`1fd0fd3`→`a2ca1cc`).
+- **Sumsub applicant model gotcha.** One wallet (externalUserId = `address.toLowerCase()`) =
+  ONE applicant of ONE type → **use separate wallets for KYC vs KYB**. A stuck applicant
+  blocks reuse ("Verification expired"); free the address with the admin `updateExternalId`
+  helper (park its externalUserId).
+- **KYC live end-to-end (the July open item, closed).** On camino-kyc.pages.dev: connect →
+  KYC → real Sumsub WebSDK → sandbox GREEN → `applicantReviewed` webhook → oracle
+  `setVerified` → Base Sepolia `KYC_BASIC=true`. Confirmed on-chain.
+- **Frontend polish.** Disconnect button + `accountsChanged` listener (switch wallets;
+  `aab6929`); after a WebSDK submit the badge **auto-flips** by polling the chain + a success
+  **toast** (`edf347d`); admin **Event history** table wired to `GET /events` (`63365d0`).
+- **Concurrency hardening (operator flag: Sumsub retries + Render cold starts ⇒ duplicate
+  deliveries).** `registry.applyState` now runs the whole read-decide-write **inside** the
+  oracle's single tx queue, so concurrent duplicate webhooks don't each submit a redundant
+  tx. Tested live: 2 simultaneous identical webhooks → **1** on-chain write.
+- **Full webhook lifecycle** (`354c431`). The one endpoint now handles ALL subscribed types:
+  GREEN → verified; **any RED / `applicantReset` / `applicantDeactivated` / `applicantDeleted`
+  → revoked** (`false`) — expiry surfaces as a reset. Pending/on-hold/unconfigured-level are
+  logged only. Every event goes to a store audit trail exposed at **`GET /events`** (admin).
+  Tested live: GREEN→verified then RESET→revoked (both write on-chain). Reject-type recorded
+  (FINAL vs RETRY) though we revoke on any RED (conservative; RETRY-during-initial is a no-op).
+- **Still open:** KYB **WebSDK** live run (company flow via `new company 2.0` — untested; may
+  need the applicant pre-created with company info via API); durable event store (Render free
+  tier disk is ephemeral, so `/events` history resets on redeploy — chain stays source of truth).
